@@ -1,0 +1,7 @@
+node_modules/
+web/dist/
+pb_data/
+backend/pb_public/
+/splitwiz
+*.log
+.DS_Store
