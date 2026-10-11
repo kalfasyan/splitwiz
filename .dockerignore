@@ -1,0 +1,4 @@
+**/node_modules
+web/dist
+**/pb_data
+.git

@@ -1,0 +1,14 @@
+# Paste this into Synology Container Manager > Project > Create.
+# Data lives in /volume1/docker/splitwiz/pb_data on the NAS.
+services:
+  splitwiz:
+    image: ghcr.io/kalfasyan/splitwiz:latest
+    container_name: splitwiz
+    restart: always
+    ports:
+      - "127.0.0.1:8090:8090" # only reachable through DSM's reverse proxy
+    volumes:
+      - /volume1/docker/splitwiz/pb_data:/app/pb_data
+    environment:
+      - TZ=Europe/Brussels
+    mem_limit: 256m
