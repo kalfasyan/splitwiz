@@ -8,6 +8,7 @@ Shared expenses for two people, self-hosted on a Synology NAS and used from Andr
 - **History** by month with search, edit and delete.
 - **Repeating expenses** (weekly, monthly, yearly): added automatically on their day, and caught up if the NAS was asleep. Pause, edit or stop them under Settings.
 - **Import from Splitwise**: pick a group's CSV export under Settings. Every expense and payment comes over with the same final balance, and importing the same file again adds only new rows.
+- **Stats** for a chosen period (this month, last month, 3 or 12 months, this year, all time): total spent, who paid what, spending per month, by category with tap-to-drill-down, and the biggest expenses.
 - **Live sync** between both phones, and **CSV export** of everything.
 
 ## How it is built

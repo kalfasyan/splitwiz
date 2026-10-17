@@ -6,11 +6,12 @@
   import Home from './components/Home.svelte';
   import History from './components/History.svelte';
   import Settings from './components/Settings.svelte';
+  import Stats from './components/Stats.svelte';
   import ExpenseForm from './components/ExpenseForm.svelte';
   import SettleForm from './components/SettleForm.svelte';
   import Sheet from './components/Sheet.svelte';
 
-  type Tab = 'home' | 'history' | 'settings';
+  type Tab = 'home' | 'history' | 'stats' | 'settings';
   let tab = $state<Tab>('home');
 
   // which sheet is open; `null` item means "new"
@@ -36,6 +37,7 @@
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'home', label: 'Home', icon: 'M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z' },
     { id: 'history', label: 'History', icon: 'M4 6h16M4 12h16M4 18h10' },
+    { id: 'stats', label: 'Stats', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
     { id: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-2-1.2L14.5 3h-5l-.4 2.6a7.5 7.5 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 0 0 2 1.2l.4 2.6h5l.4-2.6a7.5 7.5 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z' },
   ];
 </script>
@@ -54,6 +56,8 @@
       <Home {...actions} />
     {:else if tab === 'history'}
       <History {...actions} />
+    {:else if tab === 'stats'}
+      <Stats editExpense={actions.editExpense} />
     {:else}
       <Settings editRecurring={(r) => (recurringSheet = r)} />
     {/if}
