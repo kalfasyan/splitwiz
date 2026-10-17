@@ -1,6 +1,19 @@
 <script lang="ts">
   import { app } from '../lib/state.svelte';
-  import { pb } from '../lib/pb';
+  import { formatCents } from '../lib/money';
+  import { dayOf, pb, type Recurring } from '../lib/pb';
+  import ImportSplitwise from './ImportSplitwise.svelte';
+
+  let { editRecurring }: { editRecurring: (r: Recurring) => void } = $props();
+
+  const everyLabel = { week: 'Weekly', month: 'Monthly', year: 'Yearly' };
+  const shortDate = (d: string) =>
+    new Date(dayOf(d) + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+  async function togglePause(r: Recurring) {
+    await pb.collection('recurring_expenses').update(r.id, { paused: !r.paused });
+    await app.reload();
+  }
 
   let name = $state(app.me?.name ?? '');
   let saved = $state(false);
@@ -46,6 +59,31 @@
     </div>
     <p class="px-1 text-sm text-slate-500">Signed in as {app.me?.email}</p>
   </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="px-1 font-semibold">Repeating expenses</h2>
+    {#if app.recurring.length === 0}
+      <p class="px-1 text-sm text-slate-500">None yet. When adding an expense, pick Weekly, Monthly or Yearly under Repeat.</p>
+    {:else}
+      <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+        {#each app.recurring as r (r.id)}
+          <div class="flex items-center gap-3 px-4 py-3">
+            <button class="min-w-0 flex-1 text-left" onclick={() => editRecurring(r)}>
+              <span class="block truncate font-medium {r.paused ? 'text-slate-400' : ''}">
+                {app.category(r.category)?.emoji ?? '🔁'} {r.description}
+              </span>
+              <span class="block truncate text-sm text-slate-500">
+                {formatCents(r.amount_cents)} · {everyLabel[r.every]} · {r.paused ? 'paused' : `next ${shortDate(r.next_date)}`}
+              </span>
+            </button>
+            <button class="chip" onclick={() => togglePause(r)}>{r.paused ? 'Resume' : 'Pause'}</button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
+
+  <ImportSplitwise />
 
   <section class="flex flex-col gap-3">
     <button class="btn-secondary" onclick={exportCsv}>Export all data (CSV)</button>

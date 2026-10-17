@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { app } from './lib/state.svelte';
-  import type { Expense, Settlement } from './lib/pb';
+  import type { Expense, Recurring, Settlement } from './lib/pb';
   import Login from './components/Login.svelte';
   import Home from './components/Home.svelte';
   import History from './components/History.svelte';
@@ -16,6 +16,7 @@
   // which sheet is open; `null` item means "new"
   let expenseSheet = $state<{ item: Expense | null } | null>(null);
   let settleSheet = $state<{ item: Settlement | null } | null>(null);
+  let recurringSheet = $state<Recurring | null>(null);
 
   onMount(() => {
     if (app.me) app.start();
@@ -54,7 +55,7 @@
     {:else if tab === 'history'}
       <History {...actions} />
     {:else}
-      <Settings />
+      <Settings editRecurring={(r) => (recurringSheet = r)} />
     {/if}
   </div>
 
@@ -82,6 +83,12 @@
   {#if expenseSheet}
     <Sheet onclose={() => (expenseSheet = null)} title={expenseSheet.item ? 'Edit expense' : 'Add expense'}>
       <ExpenseForm expense={expenseSheet.item} onclose={() => (expenseSheet = null)} />
+    </Sheet>
+  {/if}
+
+  {#if recurringSheet}
+    <Sheet onclose={() => (recurringSheet = null)} title="Repeating expense">
+      <ExpenseForm template={recurringSheet} onclose={() => (recurringSheet = null)} />
     </Sheet>
   {/if}
 

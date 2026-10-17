@@ -38,6 +38,8 @@ func registerRoutes(se *core.ServeEvent) {
 	g.GET("/export.csv", func(e *core.RequestEvent) error {
 		return exportCSV(e)
 	})
+
+	g.POST("/import/splitwise", importSplitwise)
 }
 
 func loadUsers(app core.App) ([]*core.Record, error) {

@@ -6,6 +6,8 @@ Shared expenses for two people, self-hosted on a Synology NAS and used from Andr
 - **One balance** on the home screen: who owes whom, and how much.
 - **Settle up** with one tap, full or partial.
 - **History** by month with search, edit and delete.
+- **Repeating expenses** (weekly, monthly, yearly): added automatically on their day, and caught up if the NAS was asleep. Pause, edit or stop them under Settings.
+- **Import from Splitwise**: pick a group's CSV export under Settings. Every expense and payment comes over with the same final balance, and importing the same file again adds only new rows.
 - **Live sync** between both phones, and **CSV export** of everything.
 
 ## How it is built
@@ -13,7 +15,8 @@ Shared expenses for two people, self-hosted on a Synology NAS and used from Andr
 | Part | Choice |
 | --- | --- |
 | Backend | [PocketBase](https://pocketbase.io) used as a Go framework (`backend/`), SQLite database |
-| Money logic | `backend/ledger`: integer cents, split and balance rules, unit tested |
+| Money logic | `backend/ledger`: integer cents, split, balance and repeat-date rules, unit tested |
+| Splitwise import | `backend/splitwise`: parses the export, keeps each row's exact split |
 | Web app | Svelte 5 + Vite + Tailwind (`web/`), installable PWA |
 | Packaging | One Docker image (`Dockerfile`), published to `ghcr.io/kalfasyan/splitwiz` by GitHub Actions |
 
@@ -59,7 +62,13 @@ Open `https://<your-name>.synology.me` in Chrome, sign in, then tap **Install ap
 
 ## Updating
 
-Every push to `main` publishes a new `latest` image. In Container Manager, pull the new image (Image > `ghcr.io/kalfasyan/splitwiz` > Update, when DSM shows it), then Project > splitwiz > Action > Build to recreate the container. The database stays in `pb_data` and migrations run on start. The exact DSM menu names will be confirmed during the first install.
+From a computer with Docker and SSH access to the NAS:
+
+```sh
+scripts/deploy-to-nas.sh you@your-nas-address
+```
+
+It builds the image locally, copies it over and recreates the container. Alternatively, every push to `main` publishes a new `latest` image. In Container Manager, pull the new image (Image > `ghcr.io/kalfasyan/splitwiz` > Update, when DSM shows it), then Project > splitwiz > Action > Build to recreate the container. The database stays in `pb_data` and migrations run on start. The exact DSM menu names will be confirmed during the first install.
 
 ## Backups
 

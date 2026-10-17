@@ -22,6 +22,8 @@ func Register(app core.App) {
 		return nil
 	})
 
+	registerRecurring(app)
+
 	app.OnRecordValidate("expenses").BindFunc(func(e *core.RecordEvent) error {
 		if err := computeOwed(e.Record); err != nil {
 			return err

@@ -2,12 +2,19 @@
   import { onMount, untrack } from 'svelte';
   import { app } from '../lib/state.svelte';
   import { formatCents, owedCents, parseAmount } from '../lib/money';
-  import { dayOf, pb, toPbDate, today, type Expense, type SplitMode } from '../lib/pb';
+  import { dayOf, pb, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
 
-  let { expense, onclose }: { expense: Expense | null; onclose: () => void } = $props();
+  let {
+    expense = null,
+    template = null,
+    onclose,
+  }: { expense?: Expense | null; template?: Recurring | null; onclose: () => void } = $props();
 
   // the form edits a copy; later prop changes don't reset what was typed
-  const initial = untrack(() => expense);
+  const initialTemplate = untrack(() => template);
+  const initial = untrack(() => expense) ?? initialTemplate;
+  const editingTemplate = !!initialTemplate;
+  const series = untrack(() => app.recurringOf(expense?.recurring ?? ''));
 
   const centsText = (c: number) => (c / 100).toFixed(2);
 
@@ -18,7 +25,8 @@
   let payerPercent = $state(initial?.split_mode === 'percent' ? initial.payer_percent : 50);
   let otherShareText = $state(initial?.split_mode === 'exact' ? centsText(initial.other_share_cents) : '');
   let category = $state(initial?.category ?? '');
-  let day = $state(initial ? dayOf(initial.date) : today());
+  let day = $state(initialTemplate ? dayOf(initialTemplate.next_date) : initial ? dayOf((initial as Expense).date) : today());
+  let every = $state<Every | ''>(initialTemplate?.every ?? '');
   let note = $state(initial?.note ?? '');
   let busy = $state(false);
   let error = $state('');
@@ -35,6 +43,13 @@
   const otherId = $derived(app.users.find((u) => u.id !== paidBy)?.id ?? '');
   const otherName = $derived(app.nameOf(otherId));
   const valid = $derived(amount !== null && owed !== null && description.trim() !== '' && !!paidBy);
+
+  const repeats: { id: Every | ''; label: string }[] = [
+    { id: '', label: 'Never' },
+    { id: 'week', label: 'Weekly' },
+    { id: 'month', label: 'Monthly' },
+    { id: 'year', label: 'Yearly' },
+  ];
 
   const suggestions = $derived([...new Set(app.expenses.map((e) => e.description))].slice(0, 30));
 
@@ -65,12 +80,19 @@
       payer_percent: mode === 'percent' ? payerPercent : 0,
       other_share_cents: mode === 'exact' ? otherShare : 0,
       category: category || null,
-      date: toPbDate(day),
       note: note.trim(),
     };
     try {
-      if (expense) await pb.collection('expenses').update(expense.id, data);
-      else await pb.collection('expenses').create(data);
+      if (template) {
+        await pb.collection('recurring_expenses').update(template.id, { ...data, every, next_date: toPbDate(day) });
+      } else if (expense) {
+        await pb.collection('expenses').update(expense.id, { ...data, date: toPbDate(day) });
+      } else if (every) {
+        // the server adds the first expense when its date has come
+        await pb.collection('recurring_expenses').create({ ...data, every, next_date: toPbDate(day) });
+      } else {
+        await pb.collection('expenses').create({ ...data, date: toPbDate(day) });
+      }
       onclose();
       app.reload();
     } catch (err) {
@@ -81,10 +103,13 @@
   }
 
   async function remove() {
-    if (!expense || !confirm(`Delete “${expense.description}”?`)) return;
+    if (template) {
+      if (!confirm(`Stop repeating “${template.description}”? Expenses already added stay.`)) return;
+    } else if (!expense || !confirm(`Delete “${expense.description}”?`)) return;
     busy = true;
     try {
-      await pb.collection('expenses').delete(expense.id);
+      if (template) await pb.collection('recurring_expenses').delete(template.id);
+      else await pb.collection('expenses').delete(expense!.id);
       onclose();
       app.reload();
     } finally {
@@ -172,15 +197,43 @@
     </div>
   </div>
 
+  {#if !expense}
+    <div>
+      <p class="mb-2 text-sm font-medium text-slate-600 dark:text-slate-300">Repeat</p>
+      <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+        {#each repeats as r (r.id)}
+          {#if r.id || !editingTemplate}
+            <button type="button" class="chip" aria-pressed={every === r.id} onclick={() => (every = r.id)}>{r.label}</button>
+          {/if}
+        {/each}
+      </div>
+      {#if every}
+        <p class="mt-2 text-sm text-slate-500">
+          {day > today() ? `First added on ${day}` : editingTemplate ? `Next added on ${day}` : 'Added today, then'}
+          {every === 'week' ? 'every week' : every === 'month' ? 'every month on the same day' : 'every year'}.
+        </p>
+      {/if}
+    </div>
+  {:else if series}
+    <p class="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+      🔁 Part of “{series.description}”, repeating {series.every === 'week' ? 'weekly' : series.every === 'month' ? 'monthly' : 'yearly'}.
+      Changes here only affect this one. Edit the series under Settings.
+    </p>
+  {/if}
+
   <div class="grid grid-cols-2 gap-2">
-    <input type="date" aria-label="Date" bind:value={day} required />
+    <input type="date" aria-label={every ? 'Next date' : 'Date'} bind:value={day} required />
     <input placeholder="Note (optional)" aria-label="Note" maxlength="1000" bind:value={note} />
   </div>
 
   {#if error}<p class="text-sm text-red-600">{error}</p>{/if}
 
-  <button class="btn-primary" disabled={!valid || busy}>{expense ? 'Save changes' : 'Add expense'}</button>
-  {#if expense}
-    <button type="button" class="py-2 text-sm font-medium text-red-600" onclick={remove} disabled={busy}>Delete expense</button>
+  <button class="btn-primary" disabled={!valid || busy}>
+    {expense || template ? 'Save changes' : every ? 'Add repeating expense' : 'Add expense'}
+  </button>
+  {#if expense || template}
+    <button type="button" class="py-2 text-sm font-medium text-red-600" onclick={remove} disabled={busy}>
+      {template ? 'Stop repeating' : 'Delete expense'}
+    </button>
   {/if}
 </form>

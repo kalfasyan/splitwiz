@@ -20,6 +20,27 @@ export type Expense = {
   category: string;
   date: string;
   note: string;
+  recurring: string;
+  created: string;
+};
+
+export type Every = 'week' | 'month' | 'year';
+
+/** A template the server turns into an expense on each due date. */
+export type Recurring = {
+  id: string;
+  description: string;
+  amount_cents: number;
+  paid_by: string;
+  split_mode: SplitMode;
+  payer_percent: number;
+  other_share_cents: number;
+  owed_cents: number;
+  category: string;
+  note: string;
+  every: Every;
+  next_date: string;
+  paused: boolean;
   created: string;
 };
 

@@ -1,4 +1,4 @@
-import { pb, type Category, type Expense, type Settlement, type Summary, type User } from './pb';
+import { pb, type Category, type Expense, type Recurring, type Settlement, type Summary, type User } from './pb';
 
 export type Entry =
   | { kind: 'expense'; date: string; created: string; item: Expense }
@@ -10,6 +10,7 @@ class AppState {
   categories = $state<Category[]>([]);
   expenses = $state<Expense[]>([]);
   settlements = $state<Settlement[]>([]);
+  recurring = $state<Recurring[]>([]);
   summary = $state<Summary | null>(null);
   loading = $state(false);
   error = $state('');
@@ -32,6 +33,10 @@ class AppState {
     return u?.name || u?.email || 'Partner';
   }
 
+  recurringOf(id: string): Recurring | undefined {
+    return id ? this.recurring.find((r) => r.id === id) : undefined;
+  }
+
   category(id: string): Category | undefined {
     return this.categories.find((c) => c.id === id);
   }
@@ -51,7 +56,7 @@ class AppState {
   async start() {
     await this.reload();
     this.stop();
-    for (const name of ['expenses', 'settlements']) {
+    for (const name of ['expenses', 'settlements', 'recurring_expenses']) {
       this.unsubscribers.push(await pb.collection(name).subscribe('*', () => this.scheduleReload()));
     }
   }
@@ -70,17 +75,19 @@ class AppState {
     if (!pb.authStore.isValid) return;
     this.loading = true;
     try {
-      const [users, categories, expenses, settlements, summary] = await Promise.all([
+      const [users, categories, expenses, settlements, recurring, summary] = await Promise.all([
         pb.collection('users').getFullList<User>({ sort: 'created' }),
         pb.collection('categories').getFullList<Category>({ sort: 'sort,name' }),
         pb.collection('expenses').getFullList<Expense>({ sort: '-date,-created' }),
         pb.collection('settlements').getFullList<Settlement>({ sort: '-date,-created' }),
+        pb.collection('recurring_expenses').getFullList<Recurring>({ sort: 'next_date' }),
         pb.send<Summary>('/api/splitwiz/summary', {}),
       ]);
       this.users = users;
       this.categories = categories;
       this.expenses = expenses;
       this.settlements = settlements;
+      this.recurring = recurring;
       this.summary = summary;
       this.error = '';
     } catch (err) {

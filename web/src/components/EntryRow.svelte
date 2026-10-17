@@ -19,7 +19,7 @@
     <span class="min-w-0 flex-1">
       <span class="block truncate font-medium">{e.description}</span>
       <span class="block truncate text-sm text-slate-500">
-        {app.nameOf(e.paid_by)} paid {formatCents(e.amount_cents)} · {shortDate(e.date)}
+        {e.recurring ? '🔁 ' : ''}{app.nameOf(e.paid_by)} paid {formatCents(e.amount_cents)} · {shortDate(e.date)}
       </span>
     </span>
     <span class="shrink-0 text-right">

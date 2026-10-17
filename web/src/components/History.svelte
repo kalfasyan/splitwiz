@@ -8,10 +8,12 @@
     $props();
 
   let query = $state('');
+  const PAGE = 200;
+  let shown = $state(PAGE);
 
   const filtered = $derived.by(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return app.entries;
+    if (!q) return app.entries.slice(0, shown);
     return app.entries.filter((e) => {
       if (e.kind === 'settlement') return 'settlement payment'.includes(q) || e.item.note.toLowerCase().includes(q);
       const cat = app.category(e.item.category)?.name ?? '';
@@ -61,3 +63,9 @@
     </div>
   </section>
 {/each}
+
+{#if !query.trim() && app.entries.length > shown}
+  <div class="px-4 py-4">
+    <button class="btn-secondary w-full" onclick={() => (shown += PAGE)}>Show older</button>
+  </div>
+{/if}
