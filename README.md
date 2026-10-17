@@ -48,7 +48,7 @@ Every step that changes the NAS is done by you, in DSM.
    - Source: HTTPS, hostname `splitwiz.synology.me`, port 443
    - Destination: HTTP, `localhost`, port 8090
 6. **Certificate**: Control Panel > Security > Certificate > Settings, assign the `splitwiz.synology.me` certificate to that reverse-proxy entry.
-7. **Router**: forward TCP 443 to `192.168.68.53` if it is not forwarded already.
+7. **Router**: reserve `192.168.68.56` for the NAS in the router's DHCP settings, then forward TCP 443 to it if it is not forwarded already.
 8. **Accounts**: create the admin account over SSH, typing your own password:
    `sudo docker exec -it splitwiz /app/splitwiz superuser upsert you@example.com 'your-password' --dir=/app/pb_data`.
    Then sign in at `https://splitwiz.synology.me/_/`, open the `users` collection and add two records (email, password, name).
