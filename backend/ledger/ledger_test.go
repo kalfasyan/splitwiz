@@ -44,27 +44,27 @@ func TestOwedCents(t *testing.T) {
 }
 
 func TestNetAndSummarize(t *testing.T) {
-	users := []string{"yannis", "partner"}
+	users := []string{"alex", "sam"}
 
 	expenses := []Expense{
-		{PaidBy: "yannis", OwedCents: 5000},  // groceries 100.00, 50/50
-		{PaidBy: "partner", OwedCents: 1200}, // dinner, partner paid
-		{PaidBy: "ghost", OwedCents: 9999},   // ignored
+		{PaidBy: "alex", OwedCents: 5000},  // groceries 100.00, 50/50
+		{PaidBy: "sam", OwedCents: 1200},   // dinner, partner paid
+		{PaidBy: "ghost", OwedCents: 9999}, // ignored
 	}
 	settlements := []Settlement{
-		{From: "partner", To: "yannis", AmountCents: 1000},
+		{From: "sam", To: "alex", AmountCents: 1000},
 	}
 
 	net, err := Net(users, expenses, settlements)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if net["yannis"] != 2800 || net["partner"] != -2800 {
+	if net["alex"] != 2800 || net["sam"] != -2800 {
 		t.Fatalf("net = %v", net)
 	}
 
 	b := Summarize(net)
-	if b.Debtor != "partner" || b.Creditor != "yannis" || b.AmountCents != 2800 {
+	if b.Debtor != "sam" || b.Creditor != "alex" || b.AmountCents != 2800 {
 		t.Fatalf("balance = %+v", b)
 	}
 }
