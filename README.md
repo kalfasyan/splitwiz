@@ -83,7 +83,7 @@ splitwiz.example.com {
 }
 ```
 
-Nginx Proxy Manager, Traefik, a Cloudflare Tunnel or Tailscale work just as well. Then open the address on each phone, sign in, and choose **Install app** (Android/Chrome) or **Share > Add to Home Screen** (iOS/Safari).
+Nginx Proxy Manager, Traefik, a Cloudflare Tunnel or Tailscale work just as well. Then open the address on each phone, sign in, and choose **⋮ > Install app** in Chrome on Android or **Share > Add to Home Screen** (iOS/Safari).
 
 ### Step-by-step guides
 

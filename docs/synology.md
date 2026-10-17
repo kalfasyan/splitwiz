@@ -59,7 +59,7 @@ Then sign in at `https://<your-name>.synology.me/_/`, open the **users** collect
 
 ## 9. Install it on the phones
 
-Open `https://<your-name>.synology.me` on each phone, sign in, and choose **Install app** (Android/Chrome) or **Share > Add to Home Screen** (iOS/Safari).
+Open `https://<your-name>.synology.me` on each phone, sign in, and choose **⋮ > Install app** in Chrome on Android or **Share > Add to Home Screen** (iOS/Safari).
 
 ## Updating
 
