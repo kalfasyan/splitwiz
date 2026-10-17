@@ -1,14 +1,30 @@
 <script lang="ts">
   import { app } from '../lib/state.svelte';
   import { formatCents } from '../lib/money';
-  import { dayOf, pb, type Recurring } from '../lib/pb';
+  import { dayOf, pb, today, type Recurring } from '../lib/pb';
   import ImportSplitwise from './ImportSplitwise.svelte';
+  import { suggestMonthly, type Suggestion } from '../lib/recurring';
+  import { startSeries } from '../lib/series';
 
   let { editRecurring }: { editRecurring: (r: Recurring) => void } = $props();
 
   const everyLabel = { week: 'Weekly', month: 'Monthly', year: 'Yearly' };
   const shortDate = (d: string) =>
     new Date(dayOf(d) + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const suggestions = $derived(suggestMonthly(app.expenses, app.recurring, today()));
+  let making = $state('');
+  const ordinal = (n: number) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+
+  async function makeMonthly(s: Suggestion) {
+    making = s.latest.id;
+    try {
+      await startSeries(s.latest, 'month', s.matches);
+      await app.reload();
+    } finally {
+      making = '';
+    }
+  }
 
   async function togglePause(r: Recurring) {
     await pb.collection('recurring_expenses').update(r.id, { paused: !r.paused });
@@ -82,6 +98,28 @@
       </div>
     {/if}
   </section>
+
+  {#if suggestions.length}
+    <section class="flex flex-col gap-2">
+      <h2 class="px-1 font-semibold">These look monthly</h2>
+      <p class="px-1 text-sm text-slate-500">They came back on about the same day for the last three months.</p>
+      <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+        {#each suggestions as s (s.latest.id)}
+          <div class="flex items-center gap-3 px-4 py-3">
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium">{app.category(s.latest.category)?.emoji ?? '🧾'} {s.latest.description}</span>
+              <span class="block truncate text-sm text-slate-500">
+                {formatCents(s.latest.amount_cents)} · around the {ordinal(Number(dayOf(s.latest.date).slice(8)))} · {s.matches.length} times so far
+              </span>
+            </span>
+            <button class="chip" onclick={() => makeMonthly(s)} disabled={!!making}>
+              {making === s.latest.id ? 'Saving…' : 'Make monthly'}
+            </button>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   <ImportSplitwise />
 

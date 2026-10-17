@@ -3,6 +3,8 @@
   import { app } from '../lib/state.svelte';
   import { formatCents, owedCents, parseAmount } from '../lib/money';
   import { dayOf, pb, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
+  import { nextDate, sameCharge } from '../lib/recurring';
+  import { startSeries } from '../lib/series';
 
   let {
     expense = null,
@@ -86,7 +88,12 @@
       if (template) {
         await pb.collection('recurring_expenses').update(template.id, { ...data, every, next_date: toPbDate(day) });
       } else if (expense) {
-        await pb.collection('expenses').update(expense.id, { ...data, date: toPbDate(day) });
+        const saved = await pb.collection('expenses').update<Expense>(expense.id, { ...data, date: toPbDate(day) });
+        if (every) {
+          // earlier copies of the same charge become part of the series too
+          const copies = app.expenses.filter((x) => x.id !== saved.id && !x.recurring && sameCharge(x, saved));
+          await startSeries(saved, every, [saved, ...copies]);
+        }
       } else if (every) {
         // the server adds the first expense when its date has come
         await pb.collection('recurring_expenses').create({ ...data, every, next_date: toPbDate(day) });
@@ -197,7 +204,7 @@
     </div>
   </div>
 
-  {#if !expense}
+  {#if !series}
     <div>
       <p class="mb-2 text-sm font-medium text-slate-600 dark:text-slate-300">Repeat</p>
       <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
@@ -209,7 +216,13 @@
       </div>
       {#if every}
         <p class="mt-2 text-sm text-slate-500">
-          {day > today() ? `First added on ${day}` : editingTemplate ? `Next added on ${day}` : 'Added today, then'}
+          {expense
+            ? `Next one added on ${nextDate(day, every)}, then`
+            : day > today()
+              ? `First added on ${day}`
+              : editingTemplate
+                ? `Next added on ${day}`
+                : 'Added today, then'}
           {every === 'week' ? 'every week' : every === 'month' ? 'every month on the same day' : 'every year'}.
         </p>
       {/if}
