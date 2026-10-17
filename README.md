@@ -43,19 +43,19 @@ Every step that changes the NAS is done by you, in DSM.
 2. **Data folder**: in File Station, create `docker/splitwiz/pb_data`.
 3. **Project**: Container Manager > Project > Create, name `splitwiz`, path `/volume1/docker/splitwiz`, and paste [`docker-compose.yml`](docker-compose.yml). Start it.
    - The image is private while the repository is private. Either make the package public on GitHub (Packages > splitwiz > Package settings > Change visibility), or add a registry login for `ghcr.io` in Container Manager > Registry with a GitHub token that has `read:packages`.
-4. **Address and certificate**: Control Panel > External Access > DDNS > Add, provider Synology, hostname `splitwiz.synology.me`, with "Get a certificate from Let's Encrypt" ticked.
+4. **Address and certificate**: Control Panel > External Access > DDNS > Add, provider Synology, hostname `<your-name>.synology.me`, with "Get a certificate from Let's Encrypt" ticked.
 5. **Reverse proxy**: Control Panel > Login Portal > Advanced > Reverse Proxy > Create:
-   - Source: HTTPS, hostname `splitwiz.synology.me`, port 443
+   - Source: HTTPS, hostname `<your-name>.synology.me`, port 443
    - Destination: HTTP, `localhost`, port 8090
-6. **Certificate**: Control Panel > Security > Certificate > Settings, assign the `splitwiz.synology.me` certificate to that reverse-proxy entry.
-7. **Router**: forward TCP 443 to `192.168.68.53` if it is not forwarded already.
+6. **Certificate**: Control Panel > Security > Certificate > Settings, assign the `<your-name>.synology.me` certificate to that reverse-proxy entry.
+7. **Router**: give the NAS a fixed address (DHCP reservation) in the router, then forward TCP 443 to it if it is not forwarded already.
 8. **Accounts**: create the admin account over SSH, typing your own password:
    `sudo docker exec -it splitwiz /app/splitwiz superuser upsert you@example.com 'your-password' --dir=/app/pb_data`.
-   Then sign in at `https://splitwiz.synology.me/_/`, open the `users` collection and add two records (email, password, name).
+   Then sign in at `https://<your-name>.synology.me/_/`, open the `users` collection and add two records (email, password, name).
 
 ## Install on the phones
 
-Open `https://splitwiz.synology.me` in Chrome, sign in, then tap **Install app** (or menu > Add to Home screen). Splitwiz now opens from its own icon.
+Open `https://<your-name>.synology.me` in Chrome, sign in, then tap **Install app** (or menu > Add to Home screen). Splitwiz now opens from its own icon.
 
 ## Updating
 
