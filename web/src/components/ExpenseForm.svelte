@@ -5,6 +5,8 @@
   import { dayOf, pb, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
   import { nextDate, sameCharge } from '../lib/recurring';
   import { startSeries } from '../lib/series';
+  import { byPeriod, rangeBounds } from '../lib/stats';
+  import PeriodBars from './PeriodBars.svelte';
 
   let {
     expense = null,
@@ -52,6 +54,15 @@
     { id: 'month', label: 'Monthly' },
     { id: 'year', label: 'Yearly' },
   ];
+
+  // opening an existing expense shows its category's last three months
+  const recent = $derived.by(() => {
+    if (!expense || !category) return null;
+    const { from, to } = rangeBounds('3-months', today(), []);
+    const periods = byPeriod(app.expenses.filter((e) => e.category === category), from, to);
+    const at = periods.findIndex((p) => p.key === day.slice(0, 7));
+    return { periods, highlight: at >= 0 ? at : undefined };
+  });
 
   const suggestions = $derived([...new Set(app.expenses.map((e) => e.description))].slice(0, 30));
 
@@ -126,6 +137,18 @@
 </script>
 
 <form class="flex flex-col gap-4" onsubmit={save}>
+  {#if recent}
+    <div class="rounded-2xl bg-slate-100 p-4 dark:bg-slate-800/60">
+      <PeriodBars
+        periods={recent.periods}
+        highlight={recent.highlight}
+        height={110}
+        title={`${app.category(category)?.emoji ?? ''} ${app.category(category)?.name ?? ''}`}
+      />
+      <p class="mt-1 text-xs text-slate-500">Spent on this category in the last 3 months</p>
+    </div>
+  {/if}
+
   <div class="flex items-center gap-2 rounded-2xl bg-slate-100 px-4 dark:bg-slate-800">
     <span class="text-3xl font-semibold text-slate-400">€</span>
     <input

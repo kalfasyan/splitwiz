@@ -2,15 +2,14 @@
   import { app } from '../lib/state.svelte';
   import { formatCents } from '../lib/money';
   import { dayOf, today, type Expense } from '../lib/pb';
-  import { byCategory, byPeriod, inRange, monthsIn, niceTicks, paidBy, rangeBounds, ranges, type RangeId } from '../lib/stats';
+  import { byCategory, byPeriod, inRange, monthsIn, paidBy, rangeBounds, ranges, type RangeId } from '../lib/stats';
+  import PeriodBars from './PeriodBars.svelte';
 
   let { editExpense }: { editExpense: (e: Expense) => void } = $props();
 
   let range = $state<RangeId>('12-months');
   // category id being drilled into; null = all categories
   let focus = $state<string | null>(null);
-  // period the readout above the column chart describes; null = latest
-  let active = $state<number | null>(null);
 
   const bounds = $derived(rangeBounds(range, today(), app.expenses));
   const list = $derived(inRange(app.expenses, bounds.from, bounds.to));
@@ -26,42 +25,14 @@
   const catName = (id: string) => app.category(id)?.name ?? 'No category';
   const catEmoji = (id: string) => app.category(id)?.emoji ?? '🧾';
 
-  const compact = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR', notation: 'compact', maximumFractionDigits: 1 });
-  const short = (cents: number) => compact.format(cents / 100);
   const shortDate = (d: string) => new Date(dayOf(d) + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
   function pickRange(id: RangeId) {
     range = id;
-    active = null;
   }
 
   function toggleFocus(id: string) {
     focus = focus === id ? null : id;
-    active = null;
-  }
-
-  // column chart geometry, in viewBox units
-  const W = 340;
-  const H = 150;
-  const top = 8;
-  const bottom = 20;
-  const left = 34;
-  const right = 14; // room for the last label to centre under its bar
-  const ticks = $derived(niceTicks(Math.max(0, ...periods.map((p) => p.cents))));
-  const yMax = $derived(ticks.at(-1) || 1);
-  const band = $derived((W - left - right) / Math.max(1, periods.length));
-  const barW = $derived(Math.min(24, Math.max(4, band - 2)));
-  const y = (cents: number) => top + (H - top - bottom) * (1 - cents / yMax);
-  const shown = $derived(active ?? periods.length - 1);
-  // label every period when they fit, otherwise every few
-  const labelEvery = $derived(Math.ceil(periods.length / 6));
-
-  /** Column path with a 4px rounded top and a square base. */
-  function column(x: number, w: number, h: number): string {
-    const base = H - bottom;
-    if (h <= 0) return '';
-    const r = Math.min(4, w / 2, h);
-    return `M${x},${base}V${base - h + r}Q${x},${base - h} ${x + r},${base - h}H${x + w - r}Q${x + w},${base - h} ${x + w},${base - h + r}V${base}Z`;
   }
 </script>
 
@@ -95,49 +66,12 @@
   </section>
 
   <section class="mx-4 mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-slate-900">
-    <div class="flex items-baseline justify-between gap-2">
-      <h2 class="font-semibold">
-        {periods.length && periods[0].key.length === 4 ? 'Per year' : 'Per month'}{focus !== null ? ` · ${catName(focus)}` : ''}
-      </h2>
-      {#if periods[shown]}
-        <p class="text-sm text-slate-500" aria-live="polite">
-          {periods[shown].label}: <b class="text-slate-900 dark:text-slate-100">{formatCents(periods[shown].cents)}</b>
-        </p>
-      {/if}
-    </div>
-    <svg
-      viewBox="0 0 {W} {H}"
-      class="mt-3 w-full touch-pan-y"
-      role="img"
-      aria-label="Spending per period: {periods.map((p) => `${p.label} ${formatCents(p.cents)}`).join(', ')}"
-      onpointerleave={() => (active = null)}
-    >
-      {#each ticks as t (t)}
-        <line x1={left} x2={W - right} y1={y(t)} y2={y(t)} class="stroke-slate-200 dark:stroke-slate-800" stroke-width="1" />
-        <text x={left - 6} y={y(t) + 4} text-anchor="end" class="fill-slate-400 text-[10px]">{short(t)}</text>
-      {/each}
-      {#each periods as p, i (p.key)}
-        {@const x = left + i * band + (band - barW) / 2}
-        <path
-          d={column(x, barW, (H - top - bottom) * (p.cents / yMax))}
-          class={i === shown ? 'fill-brand-600' : 'fill-brand-500/45'}
-        />
-        <!-- hit target taller and wider than the bar -->
-        <rect
-          x={left + i * band}
-          y={top}
-          width={band}
-          height={H - top}
-          fill="transparent"
-          role="presentation"
-          onpointerenter={() => (active = i)}
-          onclick={() => (active = i)}
-        />
-        {#if i % labelEvery === (periods.length - 1) % labelEvery}
-          <text x={x + barW / 2} y={H - 5} text-anchor="middle" class="fill-slate-500 text-[10px]">{p.label}</text>
-        {/if}
-      {/each}
-    </svg>
+    {#key `${range}|${focus}`}
+      <PeriodBars
+        {periods}
+        title={`${periods.length && periods[0].key.length === 4 ? 'Per year' : 'Per month'}${focus !== null ? ` · ${catName(focus)}` : ''}`}
+      />
+    {/key}
   </section>
 
   <section class="mx-4 mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-slate-900">
