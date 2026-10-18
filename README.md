@@ -1,6 +1,10 @@
 <div align="center">
 
+<img src="docs/logo.png" alt="Splitwiz, a grumpy little wizard holding back a river of euro bills with his staff" width="420">
+
 # Splitwiz
+
+*Meet Splitwiz, the wizard who splits your costs. He stands in the river of receipts and bills so the two of you don't have to. Let Splitwiz take care of the money; you take care of each other.*
 
 **Split shared expenses with your partner or roommate, on a server you own.**
 
