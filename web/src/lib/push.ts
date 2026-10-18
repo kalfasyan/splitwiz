@@ -2,14 +2,17 @@
 // its own key (GET /api/splitwiz/push/key); the service worker shows them.
 
 import { pb } from './pb';
+import { pushProblem } from './pushProblem';
 
-export type PushSupport = 'ok' | 'install' | 'unsupported';
+export type PushSupport = 'ok' | 'install' | 'insecure' | 'unsupported';
 
 const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const installed = () => matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 
 /** iPhones only allow push for the app added to the home screen. */
 export function pushSupport(): PushSupport {
+  // browsers hide push (and service workers) on plain http
+  if (!window.isSecureContext) return 'insecure';
   const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   if (ok) return 'ok';
   return isIos() && !installed() ? 'install' : 'unsupported';
@@ -38,16 +41,35 @@ export async function pushEnabled(): Promise<boolean> {
   return Notification.permission === 'granted' && !!(await current());
 }
 
+/** Brave exposes navigator.brave; it ships with its push service turned off. */
+export const isBrave = () => 'brave' in navigator;
+
 export async function enablePush(): Promise<void> {
-  if ((await Notification.requestPermission()) !== 'granted') {
-    throw new Error('Notifications are blocked for Splitwiz. Allow them in the phone’s settings, then try again.');
+  const brave = isBrave();
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    throw new Error(pushProblem(permission === 'denied' ? 'permission-denied' : 'permission-dismissed', brave));
   }
   const reg = await navigator.serviceWorker.ready;
-  const { key } = await pb.send<{ key: string }>('/api/splitwiz/push/key', {});
-  // start fresh in case the server's key changed (for example a new pb_data)
-  await (await reg.pushManager.getSubscription())?.unsubscribe();
-  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
-  await save(sub);
+  let key: string;
+  try {
+    key = (await pb.send<{ key: string }>('/api/splitwiz/push/key', {})).key;
+  } catch {
+    throw new Error(pushProblem('server', brave));
+  }
+  let sub: PushSubscription;
+  try {
+    // start fresh in case the server's key changed (for example a new pb_data)
+    await (await reg.pushManager.getSubscription())?.unsubscribe();
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
+  } catch (err) {
+    throw new Error(pushProblem('subscribe', brave, (err as Error).message));
+  }
+  try {
+    await save(sub);
+  } catch {
+    throw new Error(pushProblem('server', brave));
+  }
 }
 
 export async function disablePush(): Promise<void> {

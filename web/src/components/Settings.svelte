@@ -6,7 +6,7 @@
   import ImportSplitwise from './ImportSplitwise.svelte';
   import { suggestMonthly, type Suggestion } from '../lib/recurring';
   import { startSeries } from '../lib/series';
-  import { disablePush, enablePush, forgetPush, pushEnabled, pushSupport, testPush } from '../lib/push';
+  import { disablePush, enablePush, forgetPush, isBrave, pushEnabled, pushSupport, testPush } from '../lib/push';
 
   let { editRecurring }: { editRecurring: (r: Recurring) => void } = $props();
 
@@ -130,7 +130,15 @@
       </div>
       {#if pushOn}
         <button class="self-start px-1 text-sm text-brand-600" onclick={sendTest}>Send a test notification</button>
+      {:else if isBrave()}
+        <p class="px-1 text-sm text-slate-500">
+          In Brave, first open brave://settings/privacy, turn on “Use Google services for push messaging” and restart Brave.
+        </p>
       {/if}
+    {:else if support === 'insecure'}
+      <p class="px-1 text-sm text-slate-500">
+        Notifications only work over HTTPS. Open Splitwiz through its https:// address (not the local http:// one) and turn them on there.
+      </p>
     {:else if support === 'install'}
       <p class="px-1 text-sm text-slate-500">
         On iPhone, notifications work once Splitwiz is on your home screen: tap Share, then Add to Home Screen, and open it from there.
