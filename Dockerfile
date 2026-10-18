@@ -1,5 +1,8 @@
+# The build stages run on the build machine's own platform and cross-compile,
+# so images for ARM boards build as fast as the x86-64 one.
+
 # --- web app ---
-FROM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -7,12 +10,14 @@ COPY web/ ./
 RUN npm run build
 
 # --- backend ---
-FROM golang:1.27-alpine AS backend
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS backend
+ARG TARGETOS TARGETARCH TARGETVARIANT
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /splitwiz .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM=${TARGETVARIANT#v} \
+    go build -trimpath -ldflags="-s -w" -o /splitwiz .
 
 # --- runtime ---
 FROM alpine:3.22

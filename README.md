@@ -53,7 +53,17 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 
 ## Quick start
 
-You need Docker. This starts Splitwiz on port 8090 and keeps its data in `./pb_data`:
+You need Docker. Pick whichever fits your machine; both end at the same place.
+
+**With a terminal** (Linux server, VPS, Raspberry Pi, or a NAS with SSH):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/kalfasyan/splitwiz/main/scripts/install.sh | sh
+```
+
+It asks for an install folder, your time zone and who may connect (Enter keeps each default), then starts Splitwiz and prints the address to open.
+
+**Without a terminal** (a NAS's Docker app, Portainer, or any Compose tool): use [`docker-compose.yml`](docker-compose.yml) as it is, or with a `.env` next to it (see [`.env.example`](.env.example)). From a shell that is:
 
 ```sh
 mkdir splitwiz && cd splitwiz
@@ -61,17 +71,12 @@ curl -O https://raw.githubusercontent.com/kalfasyan/splitwiz/main/docker-compose
 docker compose up -d
 ```
 
-Then create the admin account and the two people who will use the app:
+Then open Splitwiz (`http://localhost:8090` on the same machine) and **add the two people on the setup screen**. The first person also becomes the admin for the admin page at `/_/`. That's the whole setup: there are no sign-ups, so these are the only two accounts.
 
-```sh
-docker exec -it splitwiz /app/splitwiz superuser upsert you@example.com 'a-strong-password' --dir=/app/pb_data
-```
+The setup screen is open to whoever reaches it first, so finish it before you make Splitwiz reachable from the internet. By default it only listens on the machine itself.
 
-1. Open `http://localhost:8090/_/` and sign in with that admin account.
-2. Open the **users** collection and add two records (email, password, name). Sign-ups are closed, so these are the only two accounts.
-3. Open `http://localhost:8090`, sign in as one of them, and start adding expenses.
-
-Prefer plain `docker run`?
+<details>
+<summary>Prefer plain <code>docker run</code>?</summary>
 
 ```sh
 docker run -d --name splitwiz --restart always \
@@ -79,31 +84,57 @@ docker run -d --name splitwiz --restart always \
   ghcr.io/kalfasyan/splitwiz:latest
 ```
 
-Set `TZ` to your own time zone: it decides when repeating expenses are added and when the nightly backup runs.
+</details>
+
+### Settings
+
+All optional, in `.env` next to `docker-compose.yml` (the installer writes it for you):
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `TZ` | `UTC` | Your time zone, e.g. `Europe/Brussels`. Decides when repeating expenses are added and when the nightly backup runs. |
+| `SPLITWIZ_LISTEN` | `127.0.0.1` | `127.0.0.1`: only this machine and a reverse proxy on it can connect. `0.0.0.0`: every device on your network can. |
+| `SPLITWIZ_PORT` | `8090` | The port on this machine. |
+| `SPLITWIZ_DATA` | `./pb_data` | Where the database, backups and push key live. |
+| `SPLITWIZ_VERSION` | `latest` | Image tag; a commit SHA pins one build. |
+| `SPLITWIZ_PUSH_CONTACT` | | Optional `mailto:` or `https:` address push services can contact. |
 
 ## Using it from your phones
 
-Phones need to reach Splitwiz over **HTTPS** to install it as an app. Put it behind any reverse proxy that handles certificates and forward to port 8090. With [Caddy](https://caddyserver.com), for example, this is the whole config:
+Phones need to reach Splitwiz over **HTTPS** to install it as an app and to get notifications. Plain `http://` on your home network works in a browser, but not for those two. Any of these gives you HTTPS; point it at `http://127.0.0.1:8090`:
 
-```
-splitwiz.example.com {
-    reverse_proxy 127.0.0.1:8090
-}
-```
+- **Your NAS's own reverse proxy** with its free certificate: Synology (see the [guide](docs/synology.md)), QNAP, or Unraid and TrueNAS with an Nginx Proxy Manager container.
+- **[Caddy](https://caddyserver.com)** on a server with a domain name. This is the whole config:
 
-Nginx Proxy Manager, Traefik, a Cloudflare Tunnel or Tailscale work just as well. Then open the address on each phone, sign in, and choose **⋮ > Install app** in Chrome on Android or **Share > Add to Home Screen** (iOS/Safari).
+  ```
+  splitwiz.example.com {
+      reverse_proxy 127.0.0.1:8090
+  }
+  ```
+
+- **[Tailscale](https://tailscale.com)** if you'd rather not open your router: `tailscale serve --bg 8090` gives an HTTPS address that only your own devices can reach.
+- **A Cloudflare Tunnel**, Traefik or Nginx Proxy Manager work just as well.
+
+Then open the address on each phone, sign in, and choose **⋮ > Install app** in Chrome on Android or **Share > Add to Home Screen** (iOS/Safari).
 
 ### Step-by-step guides
 
 - [Synology NAS (DSM 7, Container Manager)](docs/synology.md): container, free `*.synology.me` address, Let's Encrypt certificate and reverse proxy, all from the DSM interface.
 
+### Where it runs
+
+- **Should work** on anything that runs Docker containers for `linux/amd64`, `linux/arm64` or `linux/arm/v7`. That covers x86 and ARM servers and VPSes, Raspberry Pi 2 and newer (not the Pi Zero or Pi 1), and NAS systems with a Docker app: Synology (Container Manager), QNAP (Container Station), Unraid, TrueNAS SCALE, OpenMediaVault, Asustor and UGREEN, plus dashboards like Portainer and CasaOS that accept a Compose file.
+- **Won't work** on NAS models without Docker support (many budget and older models), or hosts without containers at all. Splitwiz is not yet listed in NAS app stores, so on those you paste the Compose file yourself.
+
 ## Updating
+
+Run the installer again, or:
 
 ```sh
 docker compose pull && docker compose up -d
 ```
 
-Every push to `main` publishes a new `latest` image. Your data stays in `pb_data` and database migrations run on start.
+Every push to `main` publishes a new `latest` image. Your data and settings stay in `pb_data` and `.env`, and database migrations run on start.
 
 ## Backups
 
@@ -116,7 +147,6 @@ Every push to `main` publishes a new `latest` image. Your data stays in `pb_data
 - Splitwiz is built for **exactly two people** sharing costs, such as a couple or two roommates. It does not do groups.
 - Amounts are shown in **euros** for now.
 - **Notifications** need the app installed (on iPhone: added to the Home Screen, iOS 16.4 or newer) and the server able to reach the internet, since they are delivered through Apple's and Google's push services. The key that signs them is created on first use in `pb_data/push_keys.json`; if it is lost, turn notifications on again on each phone.
-- The published image is for **x86-64** (`linux/amd64`). On ARM boards, build it yourself with `docker build -t splitwiz .`.
 
 ## How it is built
 
@@ -126,7 +156,7 @@ Every push to `main` publishes a new `latest` image. Your data stays in `pb_data
 | Money logic | `backend/ledger`: integer cents, split, balance and repeat-date rules, unit tested |
 | Splitwise import | `backend/splitwise`: parses the export and keeps each row's exact split |
 | Web app | Svelte 5, Vite and Tailwind (`web/`), installable PWA |
-| Packaging | One Docker image (`Dockerfile`), published to `ghcr.io/kalfasyan/splitwiz` by GitHub Actions |
+| Packaging | One Docker image (`Dockerfile`) for x86-64 and ARM, published to `ghcr.io/kalfasyan/splitwiz` by GitHub Actions |
 
 The server computes what each person owes for every expense itself, so a phone can never store an inconsistent split.
 
@@ -146,7 +176,7 @@ npm run dev               # proxies /api to :8090
 
 Tests: `cd backend && go test ./...` and `cd web && npm test && npm run check`.
 
-`scripts/deploy-to-nas.sh user@host` builds the image on your computer and replaces the running container on a Synology NAS over SSH, for when you want to try a change before pushing it.
+`scripts/deploy-to-nas.sh user@host` builds the image on your computer and replaces the running container on a NAS over SSH (in `/volume1/docker/splitwiz`, or `SPLITWIZ_DIR`), for when you want to try a change before pushing it.
 
 ## Contributing
 

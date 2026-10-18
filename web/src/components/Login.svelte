@@ -1,5 +1,16 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { pb } from '../lib/pb';
   import { app } from '../lib/state.svelte';
+  import Setup from './Setup.svelte';
+
+  // a new install has nobody to sign in as yet, so show first-run setup
+  let setup = $state(false);
+  onMount(() => {
+    pb.send<{ needed: boolean }>('/api/splitwiz/setup', {})
+      .then((r) => (setup = r.needed))
+      .catch(() => {});
+  });
 
   let email = $state('');
   let password = $state('');
@@ -20,14 +31,18 @@
   }
 </script>
 
-<main class="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-6">
-  <img src="/icons/icon-192.png" alt="" class="mx-auto mb-4 h-20 w-20" />
-  <h1 class="mb-1 text-center text-3xl font-bold">Splitwiz</h1>
-  <p class="mb-8 text-center text-slate-500">Shared expenses, simply.</p>
-  <form class="flex flex-col gap-3" onsubmit={submit}>
-    <input type="email" autocomplete="username" placeholder="Email" bind:value={email} required />
-    <input type="password" autocomplete="current-password" placeholder="Password" bind:value={password} required />
-    {#if error}<p class="text-sm text-red-600">{error}</p>{/if}
-    <button class="btn-primary mt-2" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-  </form>
-</main>
+{#if setup}
+  <Setup />
+{:else}
+  <main class="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-6">
+    <img src="/icons/icon-192.png" alt="" class="mx-auto mb-4 h-20 w-20" />
+    <h1 class="mb-1 text-center text-3xl font-bold">Splitwiz</h1>
+    <p class="mb-8 text-center text-slate-500">Shared expenses, simply.</p>
+    <form class="flex flex-col gap-3" onsubmit={submit}>
+      <input type="email" autocomplete="username" placeholder="Email" bind:value={email} required />
+      <input type="password" autocomplete="current-password" placeholder="Password" bind:value={password} required />
+      {#if error}<p class="text-sm text-red-600">{error}</p>{/if}
+      <button class="btn-primary mt-2" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+    </form>
+  </main>
+{/if}

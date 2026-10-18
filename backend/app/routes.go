@@ -25,6 +25,8 @@ type summary struct {
 }
 
 func registerRoutes(se *core.ServeEvent) {
+	registerSetupRoutes(se)
+
 	g := se.Router.Group("/api/splitwiz")
 	g.Bind(apis.RequireAuth("users"))
 

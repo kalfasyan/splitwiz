@@ -1,6 +1,8 @@
 # Running Splitwiz on a Synology NAS
 
-This guide uses only the DSM 7 web interface (plus one SSH command) and gives you Splitwiz at `https://<your-name>.synology.me`, with a free Let's Encrypt certificate. It was written on a DS220+; any Synology model with an x86-64 CPU that runs Container Manager works the same way.
+This guide uses only the DSM 7 web interface and gives you Splitwiz at `https://<your-name>.synology.me`, with a free Let's Encrypt certificate. It was written on a DS220+; any Synology model that runs Container Manager (x86-64 or ARM) works the same way.
+
+Comfortable with SSH? `curl -fsSL https://raw.githubusercontent.com/kalfasyan/splitwiz/main/scripts/install.sh | sh` on the NAS does steps 1 to 3 for you (it installs into `/volume1/docker/splitwiz`).
 
 Replace `<your-name>` with whatever hostname you pick in step 4.
 
@@ -18,7 +20,7 @@ Container Manager > Project > Create:
 
 - Name: `splitwiz`
 - Path: `/volume1/docker/splitwiz`
-- Source: create a `docker-compose.yml` and paste in the [one from this repository](../docker-compose.yml). Change `TZ` to your time zone.
+- Source: create a `docker-compose.yml` and paste in the [one from this repository](../docker-compose.yml). In the `TZ=${TZ:-UTC}` line, change `UTC` to your time zone, for example `TZ=${TZ:-Europe/Brussels}`.
 
 Start the project. Splitwiz now runs on the NAS at port 8090, reachable only from the NAS itself.
 
@@ -47,15 +49,9 @@ Give the NAS a fixed address on your network (a DHCP reservation in the router),
 
 Only want to use Splitwiz at home or over a VPN? Skip this step and the DDNS step, and use Tailscale or your VPN's address instead.
 
-## 8. Create the accounts
+## 8. Add the two people
 
-Enable SSH (Control Panel > Terminal & SNMP), connect to the NAS, and create the admin account with your own password:
-
-```sh
-sudo docker exec -it splitwiz /app/splitwiz superuser upsert you@example.com 'a-strong-password' --dir=/app/pb_data
-```
-
-Then sign in at `https://<your-name>.synology.me/_/`, open the **users** collection and add the two people (email, password, name).
+Open `https://<your-name>.synology.me`. On the setup screen, fill in a name, email and password for each of you. The first person can also sign in to the admin page at `/_/`.
 
 ## 9. Install it on the phones
 
