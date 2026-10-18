@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Expense } from './pb';
-import { byCategory, byPeriod, inRange, monthsIn, niceTicks, paidBy, rangeBounds } from './stats';
+import { byCategory, byPeriod, inRange, monthsIn, niceTicks, rangeBounds } from './stats';
 
 const ex = (date: string, cents: number, category = 'food', paid_by = 'a'): Expense =>
   ({ date: `${date} 12:00:00.000Z`, amount_cents: cents, category, paid_by }) as Expense;
@@ -32,6 +32,7 @@ describe('summaries', () => {
       ['', 500, 1],
     ]);
     expect(c[0].share).toBeCloseTo(2 / 3);
+    expect(c.map((x) => x.paid)).toEqual([{ b: 3000 }, { a: 1000 }, { a: 500 }]);
   });
 
   it('fills empty months and groups long ranges by year', () => {
@@ -44,10 +45,6 @@ describe('summaries', () => {
     const years = byPeriod(list, '2023-01-01', '2026-10-17');
     expect(years.map((p) => p.key)).toEqual(['2023', '2024', '2025', '2026']);
     expect(years.at(-1)!.cents).toBe(5000);
-  });
-
-  it('sums who paid', () => {
-    expect(paidBy(list)).toEqual({ a: 2000, b: 3000 });
   });
 
   it('counts months and picks round ticks', () => {

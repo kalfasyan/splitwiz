@@ -32,6 +32,7 @@
     settle: () => (settleSheet = { item: null }),
     editSettlement: (item: Settlement) => (settleSheet = { item }),
     showHistory: () => (tab = 'history'),
+    editRecurring: (item: Recurring) => (recurringSheet = item),
   };
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
@@ -59,7 +60,7 @@
     {:else if tab === 'stats'}
       <Stats editExpense={actions.editExpense} />
     {:else}
-      <Settings editRecurring={(r) => (recurringSheet = r)} />
+      <Settings editRecurring={actions.editRecurring} />
     {/if}
   </div>
 

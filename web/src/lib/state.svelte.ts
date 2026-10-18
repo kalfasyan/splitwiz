@@ -1,4 +1,4 @@
-import { pb, type Category, type Expense, type Recurring, type Settlement, type Summary, type User } from './pb';
+import { pb, type Budget, type Category, type Expense, type Recurring, type Settlement, type Summary, type User } from './pb';
 
 export type Entry =
   | { kind: 'expense'; date: string; created: string; item: Expense }
@@ -11,6 +11,7 @@ class AppState {
   expenses = $state<Expense[]>([]);
   settlements = $state<Settlement[]>([]);
   recurring = $state<Recurring[]>([]);
+  budget = $state<Budget | null>(null);
   summary = $state<Summary | null>(null);
   loading = $state(false);
   error = $state('');
@@ -56,7 +57,7 @@ class AppState {
   async start() {
     await this.reload();
     this.stop();
-    for (const name of ['expenses', 'settlements', 'recurring_expenses']) {
+    for (const name of ['expenses', 'settlements', 'recurring_expenses', 'budget']) {
       this.unsubscribers.push(await pb.collection(name).subscribe('*', () => this.scheduleReload()));
     }
   }
@@ -75,12 +76,13 @@ class AppState {
     if (!pb.authStore.isValid) return;
     this.loading = true;
     try {
-      const [users, categories, expenses, settlements, recurring, summary] = await Promise.all([
+      const [users, categories, expenses, settlements, recurring, budget, summary] = await Promise.all([
         pb.collection('users').getFullList<User>({ sort: 'created' }),
         pb.collection('categories').getFullList<Category>({ sort: 'sort,name' }),
         pb.collection('expenses').getFullList<Expense>({ sort: '-date,-created' }),
         pb.collection('settlements').getFullList<Settlement>({ sort: '-date,-created' }),
         pb.collection('recurring_expenses').getFullList<Recurring>({ sort: 'next_date' }),
+        pb.collection('budget').getFullList<Budget>(),
         pb.send<Summary>('/api/splitwiz/summary', {}),
       ]);
       this.users = users;
@@ -88,6 +90,7 @@ class AppState {
       this.expenses = expenses;
       this.settlements = settlements;
       this.recurring = recurring;
+      this.budget = budget[0] ?? null;
       this.summary = summary;
       this.error = '';
     } catch (err) {

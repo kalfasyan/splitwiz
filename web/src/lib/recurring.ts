@@ -3,8 +3,11 @@
 
 import type { Every, Expense, Recurring } from './pb';
 
-/** Same rule as the server's ledger.NextDate: monthly/yearly stay on the day, clamped to short months. */
-export function nextDate(day: string, every: Every): string {
+/**
+ * Same rule as the server's ledger.NextDate: monthly/yearly stay on
+ * `anchorDay` (default: the day of `day`), clamped to short months.
+ */
+export function nextDate(day: string, every: Every, anchorDay = 0): string {
   const [y, m, d] = day.split('-').map(Number);
   const fmt = (yy: number, mm: number, dd: number) =>
     `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
@@ -14,7 +17,26 @@ export function nextDate(day: string, every: Every): string {
   }
   const [ny, nm] = every === 'month' ? (m === 12 ? [y + 1, 1] : [y, m + 1]) : [y + 1, m];
   const last = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
-  return fmt(ny, nm, Math.min(d, last));
+  return fmt(ny, nm, Math.min(anchorDay >= 1 && anchorDay <= 31 ? anchorDay : d, last));
+}
+
+export type Occurrence = { series: Recurring; day: string };
+
+/**
+ * Dates the active series will add an expense on, from `from` to `to`
+ * (inclusive, YYYY-MM-DD), soonest first.
+ */
+export function upcoming(series: Recurring[], from: string, to: string): Occurrence[] {
+  const out: Occurrence[] = [];
+  for (const s of series) {
+    if (s.paused) continue;
+    let day = s.next_date.slice(0, 10);
+    for (let i = 0; i < 400 && day <= to; i++) {
+      if (day >= from) out.push({ series: s, day });
+      day = nextDate(day, s.every, s.anchor_day);
+    }
+  }
+  return out.sort((a, b) => a.day.localeCompare(b.day) || b.series.amount_cents - a.series.amount_cents);
 }
 
 const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();

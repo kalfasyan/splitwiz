@@ -1,8 +1,9 @@
 <script lang="ts">
   import { app } from '../lib/state.svelte';
   import { formatCents } from '../lib/money';
-  import type { Expense, Settlement } from '../lib/pb';
+  import type { Expense, Recurring, Settlement } from '../lib/pb';
   import EntryRow from './EntryRow.svelte';
+  import Upcoming from './Upcoming.svelte';
 
   let {
     addExpense,
@@ -10,12 +11,14 @@
     settle,
     editSettlement,
     showHistory,
+    editRecurring,
   }: {
     addExpense: () => void;
     editExpense: (e: Expense) => void;
     settle: () => void;
     editSettlement: (s: Settlement) => void;
     showHistory: () => void;
+    editRecurring: (r: Recurring) => void;
   } = $props();
 
   const balance = $derived(app.summary?.balance);
@@ -56,6 +59,8 @@
   </button>
   <button class="btn-secondary" onclick={settle} disabled={settled}>Settle up</button>
 </div>
+
+<Upcoming {editRecurring} />
 
 <section class="mt-6">
   <div class="flex items-baseline justify-between px-5 pb-1">

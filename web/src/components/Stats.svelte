@@ -2,8 +2,9 @@
   import { app } from '../lib/state.svelte';
   import { formatCents } from '../lib/money';
   import { dayOf, today, type Expense } from '../lib/pb';
-  import { byCategory, byPeriod, inRange, monthsIn, paidBy, rangeBounds, ranges, type RangeId } from '../lib/stats';
+  import { byCategory, byPeriod, inRange, monthsIn, rangeBounds, ranges, type RangeId } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
+  import MonthBudget from './MonthBudget.svelte';
 
   let { editExpense }: { editExpense: (e: Expense) => void } = $props();
 
@@ -17,7 +18,9 @@
 
   const total = $derived(list.reduce((s, e) => s + e.amount_cents, 0));
   const perMonth = $derived(Math.round(total / monthsIn(bounds.from, bounds.to)));
-  const paid = $derived(paidBy(list));
+  // you first, then your partner, so the bars read the same way everywhere
+  const people = $derived([...app.users].sort((a, b) => Number(b.id === app.me?.id) - Number(a.id === app.me?.id)));
+  const colors = ['bg-brand-600', 'bg-sky-500'];
   const categories = $derived(byCategory(list));
   const periods = $derived(byPeriod(focused, bounds.from, bounds.to));
   const biggest = $derived([...focused].sort((a, b) => b.amount_cents - a.amount_cents).slice(0, 5));
@@ -40,6 +43,10 @@
   <h1 class="text-2xl font-bold">Stats</h1>
 </header>
 
+<MonthBudget />
+
+<h2 class="px-5 pt-6 pb-2 font-semibold">Over time</h2>
+
 <div class="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none]" role="group" aria-label="Time range">
   {#each ranges as r (r.id)}
     <button class="chip" aria-pressed={range === r.id} onclick={() => pickRange(r.id)}>{r.label}</button>
@@ -55,14 +62,6 @@
     <p class="mt-1 text-sm text-slate-500">
       {list.length} expenses · {formatCents(perMonth)} a month on average
     </p>
-    <div class="mt-4 grid grid-cols-2 gap-3">
-      {#each app.users as u (u.id)}
-        <div class="rounded-2xl bg-slate-100 px-3 py-2 dark:bg-slate-800">
-          <p class="text-xs text-slate-500">{app.nameOf(u.id)} paid</p>
-          <p class="text-lg font-semibold">{formatCents(paid[u.id] ?? 0)}</p>
-        </div>
-      {/each}
-    </div>
   </section>
 
   <section class="mx-4 mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-slate-900">
@@ -83,6 +82,11 @@
         <span class="text-xs text-slate-500">Tap one to dig in</span>
       {/if}
     </div>
+    <p class="mt-1 flex gap-3 text-xs text-slate-500">
+      {#each people as u, i (u.id)}
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full {colors[i]}"></span>{app.nameOf(u.id)} paid</span>
+      {/each}
+    </p>
     <ul class="mt-3 flex flex-col gap-1">
       {#each categories as c (c.category)}
         <li>
@@ -99,10 +103,16 @@
               </span>
             </span>
             <span class="mt-1.5 block h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
-              <span
-                class="block h-2 rounded-full bg-brand-600"
-                style="width: {Math.max(1, (c.cents / categories[0].cents) * 100)}%"
-              ></span>
+              <span class="flex h-2 gap-px overflow-hidden rounded-full" style="width: {Math.max(1, (c.cents / categories[0].cents) * 100)}%">
+                {#each people as u, i (u.id)}
+                  {#if c.paid[u.id]}
+                    <span class="block h-2 {colors[i]}" style="width: {(c.paid[u.id] / c.cents) * 100}%"></span>
+                  {/if}
+                {/each}
+              </span>
+            </span>
+            <span class="mt-1 block truncate text-xs text-slate-500">
+              {people.map((u) => `${app.nameOf(u.id)} ${formatCents(c.paid[u.id] ?? 0)}`).join(' · ')}
             </span>
           </button>
         </li>

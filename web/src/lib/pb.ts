@@ -40,9 +40,13 @@ export type Recurring = {
   note: string;
   every: Every;
   next_date: string;
+  anchor_day: number;
   paused: boolean;
   created: string;
 };
+
+/** The household's shared monthly spending budget; 0 = none set. */
+export type Budget = { id: string; monthly_cents: number };
 
 export type Settlement = {
   id: string;
