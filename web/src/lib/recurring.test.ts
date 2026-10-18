@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Expense, Recurring } from './pb';
-import { nextDate, suggestMonthly } from './recurring';
+import { nextDate, suggestMonthly, upcoming } from './recurring';
 
 const ex = (date: string, description: string, amount_cents = 9839, extra: Partial<Expense> = {}): Expense =>
   ({
@@ -51,5 +51,27 @@ describe('suggestMonthly', () => {
     const known = [ex('2026-08-14', 'KBC'), ex('2026-09-14', 'KBC'), ex('2026-10-14', 'KBC')];
     const series = [{ description: 'kbc' } as Recurring];
     expect(suggestMonthly([...stopped, ...gap, ...drift, ...linked, ...known], series, today)).toEqual([]);
+  });
+});
+
+describe('upcoming', () => {
+  const s = (id: string, next: string, every: Recurring['every'], extra: Partial<Recurring> = {}): Recurring =>
+    ({ id, amount_cents: 100, every, next_date: `${next} 12:00:00.000Z`, anchor_day: 0, paused: false, ...extra }) as Recurring;
+
+  it('lists every date in the window, soonest first', () => {
+    const list = upcoming([s('rent', '2026-11-01', 'month'), s('gym', '2026-10-20', 'week'), s('off', '2026-10-19', 'week', { paused: true })], '2026-10-18', '2026-11-17');
+    expect(list.map((o) => `${o.series.id} ${o.day}`)).toEqual([
+      'gym 2026-10-20',
+      'gym 2026-10-27',
+      'rent 2026-11-01',
+      'gym 2026-11-03',
+      'gym 2026-11-10',
+      'gym 2026-11-17',
+    ]);
+  });
+
+  it('keeps monthly series on their anchor day after a short month', () => {
+    const list = upcoming([s('x', '2027-02-28', 'month', { anchor_day: 31 })], '2027-02-01', '2027-04-30');
+    expect(list.map((o) => o.day)).toEqual(['2027-02-28', '2027-03-31', '2027-04-30']);
   });
 });

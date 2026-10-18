@@ -4,6 +4,7 @@
   import { dayOf, today, type Expense } from '../lib/pb';
   import { byCategory, byPeriod, inRange, monthsIn, paidBy, rangeBounds, ranges, type RangeId } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
+  import MonthBudget from './MonthBudget.svelte';
 
   let { editExpense }: { editExpense: (e: Expense) => void } = $props();
 
@@ -39,6 +40,10 @@
 <header class="px-5 pt-6 pb-2">
   <h1 class="text-2xl font-bold">Stats</h1>
 </header>
+
+<MonthBudget />
+
+<h2 class="px-5 pt-6 pb-2 font-semibold">Over time</h2>
 
 <div class="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none]" role="group" aria-label="Time range">
   {#each ranges as r (r.id)}
