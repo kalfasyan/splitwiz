@@ -146,7 +146,7 @@ Every push to `main` publishes a new `latest` image. Your data and settings stay
 
 - Splitwiz is built for **exactly two people** sharing costs, such as a couple or two roommates. It does not do groups.
 - Amounts are shown in **euros** for now.
-- **Notifications** need the app installed (on iPhone: added to the Home Screen, iOS 16.4 or newer) and the server able to reach the internet, since they are delivered through Apple's and Google's push services. The key that signs them is created on first use in `pb_data/push_keys.json`; if it is lost, turn notifications on again on each phone.
+- **Notifications** need the app installed (on iPhone: added to the Home Screen, iOS 16.4 or newer) and the server able to reach the internet, since they are delivered through Apple's and Google's push services. The key that signs them is created on first use in `pb_data/push_keys.json`; if it is lost, turn notifications on again on each phone. In **Brave**, also turn on "Use Google services for push messaging" under `brave://settings/privacy` and restart Brave; it is off by default.
 
 ## How it is built
 
