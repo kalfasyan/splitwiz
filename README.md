@@ -30,7 +30,7 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 - **Repeating expenses** (weekly, monthly, yearly) are added automatically on their day, and caught up if the server was off. Any expense can be turned into a repeating one, and Settings suggests charges that already look monthly ("These look monthly"), for example right after an import.
 - **Coming up** on the home screen lists the repeating expenses due in the next 30 days or 3 months, with their total, so nothing arrives as a surprise.
 - **Monthly budget** shared by both of you. Stats shows this month's spending against it and where the month is heading: everyday spending is projected with a simple linear trend and the repeating expenses still due are added on their day.
-- **Stats** for this month, last month, 3 or 12 months, this year or all time: total spent, who paid what, spending per month, a breakdown by category you can drill into, and the biggest expenses.
+- **Stats** for this month, last month, 3 or 12 months, this year or all time: total spent, spending per month, a breakdown by category (with who paid what in each) you can drill into, and the biggest expenses.
 - **Category trend on every expense**: open an expense to see what you spent in its category over the last three months.
 - **Import from Splitwise**: pick a group's CSV export under Settings. Importing the same file again only adds new rows.
 - **Live sync** between both phones, **light and dark mode**, and a **CSV export** of everything.

@@ -53,16 +53,27 @@ export function inRange(expenses: Expense[], from: string, to: string): Expense[
   });
 }
 
-export type CategoryTotal = { category: string; cents: number; count: number; share: number };
+export type CategoryTotal = {
+  category: string;
+  cents: number;
+  count: number;
+  share: number;
+  /** cents paid per user id within the category */
+  paid: Record<string, number>;
+};
 
-/** Totals per category id ('' = no category), largest first. */
+/**
+ * Totals per category id ('' = no category), largest first, with who paid
+ * how much of each: one person paying the rent says nothing about the rest.
+ */
 export function byCategory(expenses: Expense[]): CategoryTotal[] {
-  const totals = new Map<string, { cents: number; count: number }>();
+  const totals = new Map<string, { cents: number; count: number; paid: Record<string, number> }>();
   let all = 0;
   for (const e of expenses) {
-    const t = totals.get(e.category) ?? { cents: 0, count: 0 };
+    const t = totals.get(e.category) ?? { cents: 0, count: 0, paid: {} };
     t.cents += e.amount_cents;
     t.count++;
+    t.paid[e.paid_by] = (t.paid[e.paid_by] ?? 0) + e.amount_cents;
     totals.set(e.category, t);
     all += e.amount_cents;
   }
@@ -106,13 +117,6 @@ export function byPeriod(expenses: Expense[], from: string, to: string): Period[
       : new Date(key + '-15T12:00:00').toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
     cents: totals.get(key)!,
   }));
-}
-
-/** Who paid how much in total, by user id. */
-export function paidBy(expenses: Expense[]): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const e of expenses) out[e.paid_by] = (out[e.paid_by] ?? 0) + e.amount_cents;
-  return out;
 }
 
 /** Number of calendar months the range touches, for "per month" averages. */
