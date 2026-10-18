@@ -13,13 +13,14 @@
   {#if entry.kind === 'expense'}
     {@const e = entry.item}
     {@const mine = e.paid_by === app.me?.id}
+    {@const comments = app.commentsOf(e.id).length}
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl dark:bg-slate-800">
       {app.category(e.category)?.emoji ?? '🧾'}
     </span>
     <span class="min-w-0 flex-1">
       <span class="block truncate font-medium">{e.description}</span>
       <span class="block truncate text-sm text-slate-500">
-        {e.recurring ? '🔁 ' : ''}{app.nameOf(e.paid_by)} paid {formatCents(e.amount_cents)} · {shortDate(e.date)}
+        {e.recurring ? '🔁 ' : ''}{app.nameOf(e.paid_by)} paid {formatCents(e.amount_cents)} · {shortDate(e.date)}{comments ? ` · 💬 ${comments}` : ''}
       </span>
     </span>
     <span class="shrink-0 text-right">

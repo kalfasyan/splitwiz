@@ -43,3 +43,33 @@ self.addEventListener('fetch', (event) => {
     ),
   );
 });
+
+// push notifications sent by the NAS (backend/app/push.go)
+self.addEventListener('push', (event) => {
+  const n = event.data ? event.data.json() : { title: 'Splitwiz', body: '' };
+  event.waitUntil(
+    self.registration.showNotification(n.title, {
+      body: n.body,
+      tag: n.tag,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: n.url || '/' },
+    }),
+  );
+});
+
+// tapping one opens the app on that expense, reusing an open window
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+      if (open) {
+        open.postMessage({ open: url });
+        return open.focus();
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});

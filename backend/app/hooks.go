@@ -23,6 +23,8 @@ func Register(app core.App) {
 	})
 
 	registerRecurring(app)
+	registerComments(app)
+	registerNotifications(app)
 
 	app.OnRecordValidate("expenses").BindFunc(func(e *core.RecordEvent) error {
 		if err := computeOwed(e.Record); err != nil {

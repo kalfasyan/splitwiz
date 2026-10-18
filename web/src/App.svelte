@@ -19,11 +19,31 @@
   let settleSheet = $state<{ item: Settlement | null } | null>(null);
   let recurringSheet = $state<Recurring | null>(null);
 
+  // a tapped notification opens /?expense=<id> or /?tab=stats
+  function openLink(url: string) {
+    const q = new URL(url, location.origin).searchParams;
+    const t = q.get('tab');
+    if (t === 'home' || t === 'history' || t === 'stats' || t === 'settings') tab = t;
+    const e = app.expenses.find((x) => x.id === q.get('expense'));
+    if (e) expenseSheet = { item: e };
+  }
+
   onMount(() => {
-    if (app.me) app.start();
+    if (app.me) {
+      const link = location.search ? location.href : '';
+      if (link) history.replaceState(null, '', '/');
+      app.start().then(() => link && openLink(link));
+    }
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.open && app.me) app.reload().then(() => openLink(e.data.open));
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
     const onVisible = () => document.visibilityState === 'visible' && app.me && app.reload();
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      navigator.serviceWorker?.removeEventListener('message', onMessage);
+    };
   });
 
   const actions = {
@@ -87,7 +107,9 @@
 
   {#if expenseSheet}
     <Sheet onclose={() => (expenseSheet = null)} title={expenseSheet.item ? 'Edit expense' : 'Add expense'}>
-      <ExpenseForm expense={expenseSheet.item} onclose={() => (expenseSheet = null)} />
+      {#key expenseSheet.item?.id}
+        <ExpenseForm expense={expenseSheet.item} onclose={() => (expenseSheet = null)} />
+      {/key}
     </Sheet>
   {/if}
 

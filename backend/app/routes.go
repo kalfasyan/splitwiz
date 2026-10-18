@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
@@ -40,6 +41,8 @@ func registerRoutes(se *core.ServeEvent) {
 	})
 
 	g.POST("/import/splitwise", importSplitwise)
+
+	registerPushRoutes(g)
 }
 
 func loadUsers(app core.App) ([]*core.Record, error) {
@@ -128,6 +131,17 @@ func exportCSV(e *core.RequestEvent) error {
 		return e.InternalServerError("", err)
 	}
 
+	// comments go in the note column, oldest first
+	comments, err := e.App.FindRecordsByFilter("expense_comments", "", "created", 0, 0)
+	if err != nil {
+		return e.InternalServerError("", err)
+	}
+	notes := map[string][]string{}
+	for _, c := range comments {
+		id := c.GetString("expense")
+		notes[id] = append(notes[id], names[c.GetString("author")]+": "+c.GetString("text"))
+	}
+
 	filename := "splitwiz-" + time.Now().Format("2006-01-02") + ".csv"
 	e.Response.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	e.Response.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
@@ -146,7 +160,7 @@ func exportCSV(e *core.RequestEvent) error {
 		_ = w.Write([]string{
 			"expense", day(r), r.GetString("description"), catNames[r.GetString("category")],
 			money(r.GetInt("amount_cents")), names[r.GetString("paid_by")], r.GetString("split_mode"),
-			money(r.GetInt("owed_cents")), r.GetString("note"),
+			money(r.GetInt("owed_cents")), strings.Join(append(nonEmpty(r.GetString("note")), notes[r.Id]...), " | "),
 		})
 	}
 	for _, r := range settlements {
@@ -158,4 +172,11 @@ func exportCSV(e *core.RequestEvent) error {
 
 	w.Flush()
 	return w.Error()
+}
+
+func nonEmpty(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return []string{s}
 }

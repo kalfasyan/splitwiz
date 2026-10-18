@@ -17,7 +17,8 @@
     return app.entries.filter((e) => {
       if (e.kind === 'settlement') return 'settlement payment'.includes(q) || e.item.note.toLowerCase().includes(q);
       const cat = app.category(e.item.category)?.name ?? '';
-      return [e.item.description, e.item.note, cat].some((t) => t.toLowerCase().includes(q));
+      const comments = app.commentsOf(e.item.id).map((c) => c.text);
+      return [e.item.description, e.item.note, cat, ...comments].some((t) => t.toLowerCase().includes(q));
     });
   });
 
