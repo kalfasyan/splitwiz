@@ -1,15 +1,24 @@
-# Splitwiz: `docker compose up -d`, then open http://localhost:8090
-# On a Synology NAS, paste this into Container Manager > Project > Create
-# (see docs/synology.md).
+# Splitwiz: `docker compose up -d`, then open http://localhost:8090 and add
+# the two people on the setup screen.
+#
+# Every ${NAME:-default} below can be set in a .env file next to this one
+# (see .env.example), so updates never overwrite your settings. Or just edit
+# the default after ":-". scripts/install.sh writes the .env for you.
+#
+# On a NAS, paste this file into its Docker app (Synology Container Manager,
+# QNAP Container Station, Portainer, ...). See docs/synology.md.
 services:
   splitwiz:
-    image: ghcr.io/kalfasyan/splitwiz:latest
+    image: ghcr.io/kalfasyan/splitwiz:${SPLITWIZ_VERSION:-latest}
     container_name: splitwiz
     restart: always
     ports:
-      - "127.0.0.1:8090:8090" # only reachable from this machine and its reverse proxy
+      # 127.0.0.1: only this machine and a reverse proxy on it can connect.
+      # 0.0.0.0: every device on your network can, at http://<this-machine>:8090
+      - "${SPLITWIZ_LISTEN:-127.0.0.1}:${SPLITWIZ_PORT:-8090}:8090"
     volumes:
-      - ./pb_data:/app/pb_data # database, uploads and backups
+      - ${SPLITWIZ_DATA:-./pb_data}:/app/pb_data # database, uploads, backups and the push key
     environment:
-      - TZ=Europe/Brussels # your time zone: when repeating expenses and backups run
+      - TZ=${TZ:-UTC} # your time zone, e.g. Europe/Brussels: when repeating expenses and backups run
+      - SPLITWIZ_PUSH_CONTACT=${SPLITWIZ_PUSH_CONTACT:-} # optional mailto: or https: address for push services
     mem_limit: 256m
