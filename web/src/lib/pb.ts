@@ -45,6 +45,9 @@ export type Recurring = {
   created: string;
 };
 
+/** One message in an expense's comment thread. */
+export type Comment = { id: string; expense: string; author: string; text: string; created: string };
+
 /** The household's shared monthly spending budget; 0 = none set. */
 export type Budget = { id: string; monthly_cents: number };
 

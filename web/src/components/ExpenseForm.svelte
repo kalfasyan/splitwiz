@@ -7,6 +7,7 @@
   import { startSeries } from '../lib/series';
   import { byPeriod, rangeBounds } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
+  import Comments from './Comments.svelte';
 
   let {
     expense = null,
@@ -93,7 +94,8 @@
       payer_percent: mode === 'percent' ? payerPercent : 0,
       other_share_cents: mode === 'exact' ? otherShare : 0,
       category: category || null,
-      note: note.trim(),
+      // an existing expense keeps its comments instead
+      ...(expense ? {} : { note: note.trim() }),
     };
     try {
       if (template) {
@@ -257,10 +259,20 @@
     </p>
   {/if}
 
-  <div class="grid grid-cols-2 gap-2">
-    <input type="date" aria-label={every ? 'Next date' : 'Date'} bind:value={day} required />
-    <input placeholder="Note (optional)" aria-label="Note" maxlength="1000" bind:value={note} />
-  </div>
+  {#if expense}
+    <input type="date" aria-label="Date" bind:value={day} required />
+    <Comments expenseId={expense.id} />
+  {:else}
+    <div class="grid grid-cols-2 gap-2">
+      <input type="date" aria-label={every ? 'Next date' : 'Date'} bind:value={day} required />
+      <input
+        placeholder={every ? 'Comment on each (optional)' : 'Comment (optional)'}
+        aria-label="Comment"
+        maxlength="1000"
+        bind:value={note}
+      />
+    </div>
+  {/if}
 
   {#if error}<p class="text-sm text-red-600">{error}</p>{/if}
 

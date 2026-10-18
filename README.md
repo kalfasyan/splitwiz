@@ -1,6 +1,10 @@
 <div align="center">
 
+<img src="docs/logo.png" alt="Splitwiz, a grumpy little wizard holding back a river of euro bills with his staff" width="420">
+
 # Splitwiz
+
+*Meet Splitwiz, the wizard who splits your costs. He stands in the river of receipts and bills so the two of you don't have to. Let Splitwiz take care of the money; you take care of each other.*
 
 **Split shared expenses with your partner or roommate, on a server you own.**
 
@@ -27,6 +31,8 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 - **One balance** on the home screen: who owes whom, and how much.
 - **Settle up** with one tap, in full or in part.
 - **History** grouped by month, with search, edit and delete.
+- **Comments on expenses**: both of you can leave comments on any expense, like a small chat thread. A comment typed while adding an expense becomes the first one.
+- **Push notifications** straight from your server, no account or extra app needed. Turn them on per phone under Settings > Notifications to hear when the other person adds or changes an expense or comments, when a repeating expense is added, and once a month when spending is heading over the budget. Tapping one opens that expense.
 - **Repeating expenses** (weekly, monthly, yearly) are added automatically on their day, and caught up if the server was off. Any expense can be turned into a repeating one, and Settings suggests charges that already look monthly ("These look monthly"), for example right after an import.
 - **Coming up** on the home screen lists the repeating expenses due in the next 30 days or 3 months, with their total, so nothing arrives as a surprise.
 - **Monthly budget** shared by both of you. Stats shows this month's spending against it and where the month is heading: everyday spending is projected with a simple linear trend and the repeating expenses still due are added on their day.
@@ -109,6 +115,7 @@ Every push to `main` publishes a new `latest` image. Your data stays in `pb_data
 
 - Splitwiz is built for **exactly two people** sharing costs, such as a couple or two roommates. It does not do groups.
 - Amounts are shown in **euros** for now.
+- **Notifications** need the app installed (on iPhone: added to the Home Screen, iOS 16.4 or newer) and the server able to reach the internet, since they are delivered through Apple's and Google's push services. The key that signs them is created on first use in `pb_data/push_keys.json`; if it is lost, turn notifications on again on each phone.
 - The published image is for **x86-64** (`linux/amd64`). On ARM boards, build it yourself with `docker build -t splitwiz .`.
 
 ## How it is built

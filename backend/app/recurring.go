@@ -38,7 +38,7 @@ func registerRecurring(app core.App) {
 			return err
 		}
 		// add today's (or any past) occurrence right away
-		return addDueExpenses(e.App, e.Record.Id)
+		return addDueExpenses(e.App, e.Record.Id, authID(e))
 	})
 	app.OnRecordUpdateRequest("recurring_expenses").BindFunc(func(e *core.RecordRequestEvent) error {
 		if !e.Record.GetDateTime("next_date").Equal(e.Record.Original().GetDateTime("next_date")) {
@@ -47,7 +47,7 @@ func registerRecurring(app core.App) {
 		if err := e.Next(); err != nil {
 			return err
 		}
-		return addDueExpenses(e.App, e.Record.Id)
+		return addDueExpenses(e.App, e.Record.Id, authID(e))
 	})
 
 	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
@@ -55,7 +55,7 @@ func registerRecurring(app core.App) {
 			return err
 		}
 		e.App.Cron().MustAdd("splitwiz_recurring", "5 * * * *", func() {
-			if err := addDueExpenses(e.App, ""); err != nil {
+			if err := addDueExpenses(e.App, "", ""); err != nil {
 				e.App.Logger().Error("recurring expenses failed", "error", err)
 			}
 		})
@@ -64,7 +64,7 @@ func registerRecurring(app core.App) {
 
 	// catch up after the NAS was asleep or off
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		if err := addDueExpenses(se.App, ""); err != nil {
+		if err := addDueExpenses(se.App, "", ""); err != nil {
 			se.App.Logger().Error("recurring expenses failed", "error", err)
 		}
 		return se.Next()
@@ -80,8 +80,9 @@ func localDay(t time.Time) time.Time {
 
 // addDueExpenses creates an expense for every occurrence of a recurring
 // expense that is due today or earlier and moves next_date past today.
-// An empty id checks every series.
-func addDueExpenses(app core.App, id string) error {
+// An empty id checks every series. Everyone but `actor` (who just saved
+// the series, if anyone) is told about what was added.
+func addDueExpenses(app core.App, id, actor string) error {
 	today := localDay(time.Now())
 
 	filter := "paused = false && next_date <= {:today}"
@@ -100,13 +101,19 @@ func addDueExpenses(app core.App, id string) error {
 		return err
 	}
 
+	added := false
 	for _, s := range series {
+		n, lastID := 0, ""
 		err := app.RunInTransaction(func(tx core.App) error {
 			var err error
 			next := s.GetDateTime("next_date").Time()
 			for i := 0; i < maxCatchUp && !next.After(today); i++ {
-				if err := addOccurrence(tx, expenses, s, next); err != nil {
+				id, err := addOccurrence(tx, expenses, s, next)
+				if err != nil {
 					return err
+				}
+				if id != "" {
+					n, lastID = n+1, id
 				}
 				next, err = ledger.NextDate(next, s.GetString("every"), s.GetInt("anchor_day"))
 				if err != nil {
@@ -126,16 +133,25 @@ func addDueExpenses(app core.App, id string) error {
 		if err != nil {
 			return err
 		}
+		if n > 0 {
+			added = true
+			notifyRepeating(app, actor, s, lastID, n)
+		}
+	}
+	if added {
+		checkBudget(app)
 	}
 	return nil
 }
 
-func addOccurrence(tx core.App, expenses *core.Collection, s *core.Record, day time.Time) error {
+// addOccurrence returns the new expense's id, or "" when that day was
+// already added.
+func addOccurrence(tx core.App, expenses *core.Collection, s *core.Record, day time.Time) (string, error) {
 	// never add the same day twice, even if a run is repeated
 	exists, err := tx.FindFirstRecordByFilter("expenses", "recurring = {:id} && date = {:day}",
 		map[string]any{"id": s.Id, "day": day.Format(types.DefaultDateLayout)})
 	if err == nil && exists != nil {
-		return nil
+		return "", nil
 	}
 
 	r := core.NewRecord(expenses)
@@ -144,5 +160,15 @@ func addOccurrence(tx core.App, expenses *core.Collection, s *core.Record, day t
 	}
 	r.Set("date", day)
 	r.Set("recurring", s.Id)
-	return tx.Save(r)
+	if err := tx.Save(r); err != nil {
+		return "", err
+	}
+	return r.Id, nil
+}
+
+func authID(e *core.RecordRequestEvent) string {
+	if e.Auth == nil {
+		return ""
+	}
+	return e.Auth.Id
 }

@@ -3,6 +3,7 @@ module github.com/kalfasyan/splitwiz
 go 1.27
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/ozzo-validation/v4 v4.3.0
 	github.com/pocketbase/pocketbase v0.40.5

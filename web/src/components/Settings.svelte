@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { app } from '../lib/state.svelte';
   import { formatCents } from '../lib/money';
   import { dayOf, pb, today, type Recurring } from '../lib/pb';
   import ImportSplitwise from './ImportSplitwise.svelte';
   import { suggestMonthly, type Suggestion } from '../lib/recurring';
   import { startSeries } from '../lib/series';
+  import { disablePush, enablePush, forgetPush, pushEnabled, pushSupport, testPush } from '../lib/push';
 
   let { editRecurring }: { editRecurring: (r: Recurring) => void } = $props();
 
@@ -49,6 +51,43 @@
     }
   }
 
+  const support = pushSupport();
+  let pushOn = $state(false);
+  let pushBusy = $state(false);
+  let pushMessage = $state('');
+  onMount(async () => {
+    if (support === 'ok') pushOn = await pushEnabled();
+  });
+
+  async function togglePush() {
+    pushBusy = true;
+    pushMessage = '';
+    try {
+      if (pushOn) await disablePush();
+      else await enablePush();
+      pushOn = !pushOn;
+    } catch (err) {
+      pushMessage = (err as Error).message || 'Could not change notifications.';
+    } finally {
+      pushBusy = false;
+    }
+  }
+
+  async function sendTest() {
+    pushMessage = '';
+    try {
+      await testPush();
+      pushMessage = 'Sent. It should show up in a few seconds.';
+    } catch {
+      pushMessage = 'Could not reach the NAS.';
+    }
+  }
+
+  async function signOut() {
+    await forgetPush();
+    app.logout();
+  }
+
   async function exportCsv() {
     const res = await fetch('/api/splitwiz/export.csv', { headers: { Authorization: pb.authStore.token } });
     const blob = await res.blob();
@@ -74,6 +113,32 @@
       </button>
     </div>
     <p class="px-1 text-sm text-slate-500">Signed in as {app.me?.email}</p>
+  </section>
+
+  <section class="flex flex-col gap-2">
+    <h2 class="px-1 font-semibold">Notifications</h2>
+    {#if support === 'ok'}
+      <div class="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 dark:border-slate-800">
+        <span class="min-w-0 flex-1 text-sm text-slate-600 dark:text-slate-300">
+          {pushOn
+            ? 'On for this phone.'
+            : 'Get a notification on this phone when expenses or comments are added, and when the month heads over budget.'}
+        </span>
+        <button class="chip" aria-pressed={pushOn} onclick={togglePush} disabled={pushBusy}>
+          {pushBusy ? '…' : pushOn ? 'On' : 'Turn on'}
+        </button>
+      </div>
+      {#if pushOn}
+        <button class="self-start px-1 text-sm text-brand-600" onclick={sendTest}>Send a test notification</button>
+      {/if}
+    {:else if support === 'install'}
+      <p class="px-1 text-sm text-slate-500">
+        On iPhone, notifications work once Splitwiz is on your home screen: tap Share, then Add to Home Screen, and open it from there.
+      </p>
+    {:else}
+      <p class="px-1 text-sm text-slate-500">This browser can’t show notifications.</p>
+    {/if}
+    {#if pushMessage}<p class="px-1 text-sm text-slate-500">{pushMessage}</p>{/if}
   </section>
 
   <section class="flex flex-col gap-2">
@@ -125,7 +190,7 @@
 
   <section class="flex flex-col gap-3">
     <button class="btn-secondary" onclick={exportCsv}>Export all data (CSV)</button>
-    <button class="btn-secondary text-red-600" onclick={() => app.logout()}>Sign out</button>
+    <button class="btn-secondary text-red-600" onclick={signOut}>Sign out</button>
   </section>
 
   <p class="text-center text-xs text-slate-400">Splitwiz · running on your NAS</p>
