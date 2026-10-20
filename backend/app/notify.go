@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/types"
 
@@ -24,6 +25,7 @@ func registerNotifications(app core.App) {
 		}
 		notifyExpense(e.App, e.Auth, e.Record, "added", note)
 		checkBudget(e.App)
+		checkCategoryBudget(e.App, e.Record.GetString("category"))
 		return nil
 	})
 
@@ -36,6 +38,7 @@ func registerNotifications(app core.App) {
 			notifyExpense(e.App, e.Auth, e.Record, "changed", "")
 		}
 		checkBudget(e.App)
+		checkCategoryBudget(e.App, e.Record.GetString("category"))
 		return nil
 	})
 
@@ -48,6 +51,18 @@ func registerNotifications(app core.App) {
 			return err
 		}
 		checkBudget(e.App)
+		return nil
+	})
+
+	// same for a category's own limit
+	app.OnRecordUpdateRequest("categories").BindFunc(func(e *core.RecordRequestEvent) error {
+		if e.Record.GetInt("monthly_cents") != e.Record.Original().GetInt("monthly_cents") {
+			e.Record.Set("alerted_month", "")
+		}
+		if err := e.Next(); err != nil {
+			return err
+		}
+		checkCategoryBudget(e.App, e.Record.Id)
 		return nil
 	})
 }
@@ -162,6 +177,74 @@ func checkBudget(app core.App) {
 		n.Body = fmt.Sprintf("%s spent this month, the budget is %s.", formatEuro(spent), formatEuro(limit))
 	}
 	notifyOthers(app, "", func(string) notification { return n })
+}
+
+// categoryAlertShare is how much of a category's limit can be spent
+// before both people hear about it.
+const categoryAlertShare = 0.9
+
+// checkCategoryBudget sends one alert a month, to both people, the first
+// time a category's spending this month reaches 90% of its limit.
+func checkCategoryBudget(app core.App, categoryID string) {
+	if categoryID == "" {
+		return
+	}
+	category, err := app.FindRecordById("categories", categoryID)
+	if err != nil {
+		return
+	}
+	limit := int64(category.GetInt("monthly_cents"))
+	now := time.Now().In(time.Local)
+	month := now.Format("2006-01")
+	if limit <= 0 || category.GetString("alerted_month") == month {
+		return
+	}
+
+	spent, err := categorySpent(app, categoryID, now)
+	if err != nil {
+		app.Logger().Error("category spending failed", "error", err)
+		return
+	}
+	if float64(spent) < categoryAlertShare*float64(limit) {
+		return
+	}
+
+	category.Set("alerted_month", month)
+	if err := app.Save(category); err != nil {
+		return
+	}
+
+	name := strings.TrimSpace(category.GetString("emoji") + " " + category.GetString("name"))
+	n := notification{
+		Title: name + " almost at its limit",
+		Body:  fmt.Sprintf("%s spent this month, the limit is %s.", formatEuro(spent), formatEuro(limit)),
+		URL:   "/?tab=stats",
+		Tag:   "category-" + categoryID,
+	}
+	if spent > limit {
+		n.Title = name + " over its limit"
+	}
+	notifyOthers(app, "", func(string) notification { return n })
+}
+
+// categorySpent adds up this month's expenses in one category.
+func categorySpent(app core.App, categoryID string, now time.Time) (int64, error) {
+	y, m, _ := now.Date()
+	first := time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)
+	next := first.AddDate(0, 1, 0)
+	var row struct {
+		Total int64 `db:"total"`
+	}
+	err := app.DB().
+		Select("COALESCE(SUM(amount_cents), 0) AS total").
+		From("expenses").
+		Where(dbx.HashExp{"category": categoryID}).
+		AndWhere(dbx.NewExp("date >= {:from} AND date < {:to}", dbx.Params{
+			"from": first.Format(types.DefaultDateLayout),
+			"to":   next.Format(types.DefaultDateLayout),
+		})).
+		One(&row)
+	return row.Total, err
 }
 
 // projectMonth gathers this month's expenses and the repeating charges

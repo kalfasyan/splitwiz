@@ -4,6 +4,7 @@
   import { formatCents } from '../lib/money';
   import { dayOf, pb, today, type Recurring } from '../lib/pb';
   import ImportSplitwise from './ImportSplitwise.svelte';
+  import Categories from './Categories.svelte';
   import { suggestMonthly, type Suggestion } from '../lib/recurring';
   import { startSeries } from '../lib/series';
   import { disablePush, enablePush, forgetPush, isBrave, pushEnabled, pushSupport, testPush } from '../lib/push';
@@ -29,8 +30,7 @@
   }
 
   async function togglePause(r: Recurring) {
-    await pb.collection('recurring_expenses').update(r.id, { paused: !r.paused });
-    await app.reload();
+    await app.write('recurring_expenses', 'update', r.id, { paused: !r.paused });
   }
 
   let name = $state(app.me?.name ?? '');
@@ -193,6 +193,8 @@
       </div>
     </section>
   {/if}
+
+  <Categories />
 
   <ImportSplitwise />
 

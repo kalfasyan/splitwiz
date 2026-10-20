@@ -5,7 +5,8 @@ export const pb = new PocketBase(window.location.origin);
 pb.autoCancellation(false);
 
 export type User = { id: string; name: string; email: string };
-export type Category = { id: string; name: string; emoji: string; sort: number };
+/** monthly_cents is the category's own monthly limit; 0 = none. */
+export type Category = { id: string; name: string; emoji: string; sort: number; monthly_cents: number };
 export type SplitMode = 'equal' | 'percent' | 'exact' | 'full';
 
 export type Expense = {

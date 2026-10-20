@@ -28,19 +28,23 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 ## Features
 
 - **Add an expense in a few taps**: amount, what it was for, who paid, and how to split it (50/50, percentage, exact amount, or "the other person owes all").
+- **Quick add**: the expenses you add most often show up as one-tap chips, and typing a past description fills in who paid, the split and the category from last time.
 - **One balance** on the home screen: who owes whom, and how much.
 - **Settle up** with one tap, in full or in part.
-- **History** grouped by month, with search, edit and delete.
+- **History** grouped by month, with search and filters (type, who paid, category, amount). Export just what you filtered as CSV. Swipe a row left to edit or delete it.
+- **Undo** instead of "Are you sure?": deleting anything shows an Undo bar for a few seconds.
+- **Works offline**: the app opens with the last data loaded, and expenses, payments and comments added without a connection are saved on the phone and sync once the server is reachable.
 - **Comments on expenses**: both of you can leave comments on any expense, like a small chat thread. A comment typed while adding an expense becomes the first one.
 - **Push notifications** straight from your server, no account or extra app needed. Turn them on per phone under Settings > Notifications to hear when the other person adds or changes an expense or comments, when a repeating expense is added, and once a month when spending is heading over the budget. Tapping one opens that expense.
 - **Repeating expenses** (weekly, monthly, yearly) are added automatically on their day, and caught up if the server was off. Any expense can be turned into a repeating one, and Settings suggests charges that already look monthly ("These look monthly"), for example right after an import.
 - **Coming up** on the home screen lists the repeating expenses due in the next 30 days or 3 months, with their total, so nothing arrives as a surprise.
 - **Monthly budget** shared by both of you. Stats shows this month's spending against it and where the month is heading: everyday spending is projected with a simple linear trend and the repeating expenses still due are added on their day.
+- **Categories** are yours to manage under Settings: add, rename, reorder, change the emoji, or delete. Each one can have its **own monthly limit**; Stats shows what's left and you both get a notification at 90%.
 - **Stats** for this month, last month, 3 or 12 months, this year or all time: total spent, spending per month, a breakdown by category (with who paid what in each) you can drill into, and the biggest expenses.
 - **Category trend on every expense**: open an expense to see what you spent in its category over the last three months.
 - **Import from Splitwise**: pick a group's CSV export under Settings. Importing the same file again only adds new rows.
 - **Live sync** between both phones, **light and dark mode**, and a **CSV export** of everything.
-- **Installable web app (PWA)** for Android and iOS, with its own home-screen icon.
+- **Installable web app (PWA)** for Android and iOS, with its own home-screen icon. Long-press the icon for **Add expense** and **Settle up** shortcuts.
 
 <table>
   <tr>

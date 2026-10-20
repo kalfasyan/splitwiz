@@ -5,6 +5,7 @@
   import { byCategory, byPeriod, inRange, monthsIn, rangeBounds, ranges, type RangeId } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
   import MonthBudget from './MonthBudget.svelte';
+  import CategoryLimits from './CategoryLimits.svelte';
 
   let { editExpense }: { editExpense: (e: Expense) => void } = $props();
 
@@ -44,6 +45,7 @@
 </header>
 
 <MonthBudget />
+<CategoryLimits />
 
 <h2 class="px-5 pt-6 pb-2 font-semibold">Over time</h2>
 

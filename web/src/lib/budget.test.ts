@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Expense, Recurring } from './pb';
-import { monthOutlook, slope, suggestBudget } from './budget';
+import { categoryLimits, monthOutlook, slope, suggestBudget } from './budget';
 
 const ex = (date: string, cents: number, recurring = ''): Expense =>
   ({ date: `${date} 12:00:00.000Z`, amount_cents: cents, recurring }) as Expense;
@@ -53,5 +53,24 @@ describe('suggestBudget', () => {
     const list = [ex('2026-07-15', 100000), ex('2026-08-01', 120000), ex('2026-09-30', 130010), ex('2026-10-02', 50000), ex('2026-11-01', 1)];
     expect(suggestBudget(list, '2026-11-10')).toBe(105000);
     expect(suggestBudget([], '2026-11-10')).toBe(0);
+  });
+});
+
+describe('categoryLimits', () => {
+  const cats = [
+    { id: 'food', name: 'Food', emoji: '', sort: 0, monthly_cents: 10000 },
+    { id: 'fun', name: 'Fun', emoji: '', sort: 1, monthly_cents: 2000 },
+    { id: 'rent', name: 'Rent', emoji: '', sort: 2, monthly_cents: 0 },
+  ];
+  const ex = (date: string, cents: number, category: string) => ({ date: `${date} 12:00:00.000Z`, amount_cents: cents, category }) as Expense;
+
+  it('adds up this month per limited category, fullest first', () => {
+    const list = [ex('2026-10-02', 4000, 'food'), ex('2026-10-03', 2500, 'fun'), ex('2026-09-30', 9000, 'food'), ex('2026-10-01', 90000, 'rent')];
+    const got = categoryLimits(list, cats, '2026-10-20');
+    expect(got.map((l) => [l.category.id, l.spent])).toEqual([
+      ['fun', 2500],
+      ['food', 4000],
+    ]);
+    expect(got[0].share).toBeCloseTo(1.25);
   });
 });
