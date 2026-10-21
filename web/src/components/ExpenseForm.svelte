@@ -2,9 +2,11 @@
   import { onMount, untrack } from 'svelte';
   import { app } from '../lib/state.svelte';
   import { formatCents, owedCents, parseAmount } from '../lib/money';
-  import { dayOf, pb, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
+  import { dayOf, toPbDate, today, type Every, type Expense, type Recurring, type SplitMode } from '../lib/pb';
   import { nextDate, sameCharge } from '../lib/recurring';
   import { startSeries } from '../lib/series';
+  import { favorites, lastLike } from '../lib/quickadd';
+  import { isLocal } from '../lib/outbox';
   import { byPeriod, rangeBounds } from '../lib/stats';
   import PeriodBars from './PeriodBars.svelte';
   import Comments from './Comments.svelte';
@@ -74,11 +76,31 @@
     { id: 'full', label: () => `${otherName} owes all` },
   ];
 
-  // picking a past description pre-fills its category
+  const adding = !initial;
+  const favs = $derived(adding ? favorites(app.expenses, today()) : []);
+
+  // copies a past expense's details; the amount and category only when
+  // `all`, or when they're still empty
+  function fill(e: Expense, all: boolean) {
+    if (all || !amountText.trim()) amountText = centsText(e.amount_cents);
+    if (all || !category) category = e.category;
+    paidBy = e.paid_by;
+    mode = e.split_mode;
+    if (mode === 'percent') payerPercent = e.payer_percent;
+    if (mode === 'exact') otherShareText = centsText(e.other_share_cents);
+  }
+
+  function pick(e: Expense) {
+    description = e.description;
+    fill(e, true);
+  }
+
+  // picking a past description pre-fills how it was paid and split last time
   function onDescriptionChange() {
-    if (category) return;
-    const past = app.expenses.find((e) => e.description === description.trim());
-    if (past) category = past.category;
+    const past = lastLike(app.expenses, description);
+    if (!past) return;
+    if (adding) fill(past, false);
+    else if (!category) category = past.category;
   }
 
   async function save(e: SubmitEvent) {
@@ -99,22 +121,23 @@
     };
     try {
       if (template) {
-        await pb.collection('recurring_expenses').update(template.id, { ...data, every, next_date: toPbDate(day) });
+        await app.write('recurring_expenses', 'update', template.id, { ...data, every, next_date: toPbDate(day) });
       } else if (expense) {
-        const saved = await pb.collection('expenses').update<Expense>(expense.id, { ...data, date: toPbDate(day) });
+        await app.write('expenses', 'update', expense.id, { ...data, date: toPbDate(day) });
         if (every) {
+          const saved = { ...expense, ...data, category: data.category ?? '', date: toPbDate(day) } as Expense;
           // earlier copies of the same charge become part of the series too
           const copies = app.expenses.filter((x) => x.id !== saved.id && !x.recurring && sameCharge(x, saved));
           await startSeries(saved, every, [saved, ...copies]);
+          app.reload();
         }
       } else if (every) {
         // the server adds the first expense when its date has come
-        await pb.collection('recurring_expenses').create({ ...data, every, next_date: toPbDate(day) });
+        await app.write('recurring_expenses', 'create', null, { ...data, every, next_date: toPbDate(day) });
       } else {
-        await pb.collection('expenses').create({ ...data, date: toPbDate(day) });
+        await app.write('expenses', 'create', null, { ...data, date: toPbDate(day) });
       }
       onclose();
-      app.reload();
     } catch (err) {
       error = (err as { message?: string }).message ?? 'Could not save.';
     } finally {
@@ -122,19 +145,10 @@
     }
   }
 
-  async function remove() {
-    if (template) {
-      if (!confirm(`Stop repeating “${template.description}”? Expenses already added stay.`)) return;
-    } else if (!expense || !confirm(`Delete “${expense.description}”?`)) return;
-    busy = true;
-    try {
-      if (template) await pb.collection('recurring_expenses').delete(template.id);
-      else await pb.collection('expenses').delete(expense!.id);
-      onclose();
-      app.reload();
-    } finally {
-      busy = false;
-    }
+  function remove() {
+    if (template) app.remove('recurring_expenses', template.id, `Stopped repeating “${template.description}”. Expenses already added stay.`);
+    else if (expense) app.remove('expenses', expense.id, `Deleted “${expense.description}”`);
+    onclose();
   }
 </script>
 
@@ -162,6 +176,16 @@
       bind:value={amountText}
     />
   </div>
+
+  {#if favs.length && !description}
+    <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]" role="group" aria-label="Quick add">
+      {#each favs as f (f.id)}
+        <button type="button" class="chip" onclick={() => pick(f)}>
+          {app.category(f.category)?.emoji ?? '🧾'} {f.description} · {formatCents(f.amount_cents)}
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   <input
     list="desc-suggestions"
@@ -261,7 +285,11 @@
 
   {#if expense}
     <input type="date" aria-label="Date" bind:value={day} required />
-    <Comments expenseId={expense.id} />
+    {#if isLocal(expense.id)}
+      <p class="text-sm text-slate-500">⏳ Not synced yet. Comments can be added once it is.</p>
+    {:else}
+      <Comments expenseId={expense.id} />
+    {/if}
   {:else}
     <div class="grid grid-cols-2 gap-2">
       <input type="date" aria-label={every ? 'Next date' : 'Date'} bind:value={day} required />

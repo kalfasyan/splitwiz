@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/state.svelte';
-  import { pb, type Comment } from '../lib/pb';
+  import type { Comment } from '../lib/pb';
 
   let { expenseId }: { expenseId: string } = $props();
 
@@ -17,9 +17,8 @@
     busy = true;
     error = '';
     try {
-      await pb.collection('expense_comments').create({ expense: expenseId, text: text.trim() });
+      await app.write('expense_comments', 'create', null, { expense: expenseId, text: text.trim() });
       text = '';
-      await app.reload();
     } catch {
       error = 'Could not send.';
     } finally {
@@ -27,10 +26,8 @@
     }
   }
 
-  async function remove(c: Comment) {
-    if (!confirm('Delete this comment?')) return;
-    await pb.collection('expense_comments').delete(c.id);
-    await app.reload();
+  function remove(c: Comment) {
+    app.remove('expense_comments', c.id, 'Comment deleted');
   }
 </script>
 

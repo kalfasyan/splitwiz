@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import { app } from '../lib/state.svelte';
   import { formatCents, parseAmount } from '../lib/money';
-  import { dayOf, pb, toPbDate, today, type Settlement } from '../lib/pb';
+  import { dayOf, toPbDate, today, type Settlement } from '../lib/pb';
 
   let { settlement, onclose }: { settlement: Settlement | null; onclose: () => void } = $props();
 
@@ -33,10 +33,8 @@
     error = '';
     const data = { from_user: from, to_user: to, amount_cents: amount, date: toPbDate(day), note: note.trim() };
     try {
-      if (settlement) await pb.collection('settlements').update(settlement.id, data);
-      else await pb.collection('settlements').create(data);
+      await app.write('settlements', settlement ? 'update' : 'create', settlement?.id ?? null, data);
       onclose();
-      app.reload();
     } catch (err) {
       error = (err as { message?: string }).message ?? 'Could not save.';
     } finally {
@@ -44,16 +42,10 @@
     }
   }
 
-  async function remove() {
-    if (!settlement || !confirm('Delete this payment?')) return;
-    busy = true;
-    try {
-      await pb.collection('settlements').delete(settlement.id);
-      onclose();
-      app.reload();
-    } finally {
-      busy = false;
-    }
+  function remove() {
+    if (!settlement) return;
+    app.remove('settlements', settlement.id, `Deleted the ${formatCents(settlement.amount_cents)} payment`);
+    onclose();
   }
 </script>
 

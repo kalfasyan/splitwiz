@@ -1,7 +1,7 @@
 // The current month against the budget: what was spent so far and where the
 // month is heading. Pure functions, like stats.ts.
 
-import type { Expense, Recurring } from './pb';
+import type { Category, Expense, Recurring } from './pb';
 import { upcoming } from './recurring';
 
 export type MonthOutlook = {
@@ -116,4 +116,25 @@ export function suggestBudget(expenses: Expense[], today: string): number {
   if (!used.length) return 0;
   const avg = used.reduce((s, c) => s + c, 0) / used.length;
   return Math.ceil(avg / 5000) * 5000;
+}
+
+/** Share of a category's limit that counts as "almost there", as on the server. */
+export const CATEGORY_ALERT_SHARE = 0.9;
+
+export type CategoryLimit = { category: Category; spent: number; share: number };
+
+/** This month's spending in each category that has a monthly limit. */
+export function categoryLimits(expenses: Expense[], categories: Category[], today: string): CategoryLimit[] {
+  const month = today.slice(0, 7);
+  const spent = new Map<string, number>();
+  for (const e of expenses) {
+    if (e.category && e.date.slice(0, 7) === month) spent.set(e.category, (spent.get(e.category) ?? 0) + e.amount_cents);
+  }
+  return categories
+    .filter((c) => c.monthly_cents > 0)
+    .map((c) => {
+      const s = spent.get(c.id) ?? 0;
+      return { category: c, spent: s, share: s / c.monthly_cents };
+    })
+    .sort((a, b) => b.share - a.share);
 }

@@ -10,6 +10,7 @@
   import ExpenseForm from './components/ExpenseForm.svelte';
   import SettleForm from './components/SettleForm.svelte';
   import Sheet from './components/Sheet.svelte';
+  import Toast from './components/Toast.svelte';
 
   type Tab = 'home' | 'history' | 'stats' | 'settings';
   let tab = $state<Tab>('home');
@@ -19,29 +20,44 @@
   let settleSheet = $state<{ item: Settlement | null } | null>(null);
   let recurringSheet = $state<Recurring | null>(null);
 
-  // a tapped notification opens /?expense=<id> or /?tab=stats
+  // a tapped notification opens /?expense=<id> or /?tab=stats, and the
+  // home-screen shortcuts open /?add=expense or /?add=settle
   function openLink(url: string) {
     const q = new URL(url, location.origin).searchParams;
     const t = q.get('tab');
     if (t === 'home' || t === 'history' || t === 'stats' || t === 'settings') tab = t;
     const e = app.expenses.find((x) => x.id === q.get('expense'));
     if (e) expenseSheet = { item: e };
+    if (q.get('add') === 'expense') expenseSheet = { item: null };
+    if (q.get('add') === 'settle') settleSheet = { item: null };
   }
 
   onMount(() => {
     if (app.me) {
       const link = location.search ? location.href : '';
-      if (link) history.replaceState(null, '', '/');
-      app.start().then(() => link && openLink(link));
+      if (link) {
+        history.replaceState(null, '', '/');
+        // shortcuts open the form right away, even before the data loads
+        if (link.includes('add=')) openLink(link);
+      }
+      app.start().then(() => link && !link.includes('add=') && openLink(link));
     }
     const onMessage = (e: MessageEvent) => {
       if (e.data?.open && app.me) app.reload().then(() => openLink(e.data.open));
     };
     navigator.serviceWorker?.addEventListener('message', onMessage);
-    const onVisible = () => document.visibilityState === 'visible' && app.me && app.reload();
+    // deletions still waiting for Undo are sent before the app goes away
+    const onVisible = () => {
+      if (!app.me) return;
+      if (document.visibilityState === 'visible') app.reload();
+      else app.flushRemovals();
+    };
+    const onOnline = () => app.me && app.reload();
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
       navigator.serviceWorker?.removeEventListener('message', onMessage);
     };
   });
@@ -67,9 +83,15 @@
   <Login />
 {:else}
   <div class="mx-auto flex min-h-dvh max-w-md flex-col pb-[calc(5rem+env(safe-area-inset-bottom))]">
-    {#if app.error}
+    {#if app.error || app.outbox.length}
       <div class="mx-4 mt-3 rounded-xl bg-amber-100 px-4 py-2 text-sm text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
-        {app.error}
+        {#if app.error}<p>{app.error}</p>{/if}
+        {#if app.outbox.length}
+          <p>
+            ⏳ {app.outbox.length === 1 ? '1 change is' : `${app.outbox.length} changes are`} saved on this phone and will sync
+            once the NAS is reachable. The balance updates then.
+          </p>
+        {/if}
       </div>
     {/if}
 
@@ -104,6 +126,8 @@
       {/each}
     </div>
   </nav>
+
+  <Toast />
 
   {#if expenseSheet}
     <Sheet onclose={() => (expenseSheet = null)} title={expenseSheet.item ? 'Edit expense' : 'Add expense'}>
