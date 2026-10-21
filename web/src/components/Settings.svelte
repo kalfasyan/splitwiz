@@ -203,5 +203,8 @@
     <button class="btn-secondary text-red-600" onclick={signOut}>Sign out</button>
   </section>
 
-  <p class="text-center text-xs text-slate-400">Splitwiz · running on your NAS</p>
+  <p class="text-center text-xs text-slate-400">
+    Splitwiz · running on your NAS<br />
+    Enjoying it? <a class="underline" href="https://buymeacoffee.com/kalfasyan" target="_blank" rel="noopener">Buy me a coffee</a> ☕
+  </p>
 </div>

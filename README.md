@@ -13,6 +13,7 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 [![CI](https://github.com/kalfasyan/splitwiz/actions/workflows/ci.yml/badge.svg)](https://github.com/kalfasyan/splitwiz/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker image](https://img.shields.io/badge/docker-ghcr.io%2Fkalfasyan%2Fsplitwiz-blue?logo=docker&logoColor=white)](https://github.com/kalfasyan/splitwiz/pkgs/container/splitwiz)
+[![Buy me a coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/kalfasyan)
 
 <img src="docs/screenshots/hero.png" alt="Splitwiz on a phone: balance, adding an expense, stats, expense detail with a category chart, and settings in dark mode" width="100%">
 
@@ -185,6 +186,10 @@ Tests: `cd backend && go test ./...` and `cd web && npm test && npm run check`.
 ## Contributing
 
 Issues and pull requests are welcome. Please run the tests above before opening a pull request; CI runs the same checks.
+
+## Support
+
+Splitwiz is free and stays free. If it saves the two of you some hassle, you can [buy me a coffee](https://buymeacoffee.com/kalfasyan) ☕
 
 ## License
 
