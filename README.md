@@ -58,7 +58,7 @@ A small, self-hosted alternative to Splitwise for two people. No ads, no daily l
 
 ## Quick start
 
-**Never heard of Docker?** Follow the [step-by-step guide for non-technical people](docs/easy-install.md): rent a small online server or use a computer at home, all by clicking and pasting.
+**Never heard of Docker?** Follow the [step-by-step guide for non-technical people](docs/easy-install.md): a Windows PC or Mac at home, all by clicking and pasting.
 
 Otherwise you need Docker. Pick whichever fits your machine; both end at the same place.
 
@@ -126,7 +126,7 @@ Then open the address on each phone, sign in, and choose **⋮ > Install app** i
 
 ### Step-by-step guides
 
-- [Without technical knowledge](docs/easy-install.md): an online server (Railway) or a Windows PC or Mac at home with Docker Desktop and Tailscale.
+- [Without technical knowledge](docs/easy-install.md): a Windows PC or Mac at home with Docker Desktop and Tailscale.
 - [Synology NAS (DSM 7, Container Manager)](docs/synology.md): container, free `*.synology.me` address, Let's Encrypt certificate and reverse proxy, all from the DSM interface.
 
 ### Where it runs
